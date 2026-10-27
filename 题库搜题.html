@@ -1,0 +1,741 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0d1014">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>题库搜题</title>
+
+<style>:root {
+  --bg: #0d1014;
+  --panel: #151a21;
+  --panel-2: #1b222c;
+  --line: #262f3b;
+  --text: #e6edf5;
+  --muted: #8b98a8;
+  --accent: #4f8cff;
+  --accent-2: #22d3ee;
+  --ok: #34d399;
+  --warn: #fbbf24;
+  --err: #f87171;
+  --radius: 12px;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  height: 100%;
+  background: var(--bg);
+  color: var(--text);
+  font: 14px/1.6 "Microsoft YaHei UI", "PingFang SC", "Segoe UI", system-ui, sans-serif;
+}
+
+body {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  background:
+    radial-gradient(1200px 600px at 85% -10%, rgba(79, 140, 255, .12), transparent 60%),
+    radial-gradient(900px 500px at 5% 0%, rgba(34, 211, 238, .08), transparent 55%),
+    var(--bg);
+}
+
+/* ---------- 顶栏 ---------- */
+header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 22px;
+  border-bottom: 1px solid var(--line);
+  backdrop-filter: blur(8px);
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  background: rgba(13, 16, 20, .82);
+}
+
+.logo {
+  width: 30px; height: 30px;
+  border-radius: 9px;
+  display: grid; place-items: center;
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  font-size: 15px; font-weight: 700; color: #06121f;
+}
+
+h1 { font-size: 15px; font-weight: 600; margin: 0; letter-spacing: .3px; }
+h1 small { color: var(--muted); font-weight: 400; margin-left: 8px; font-size: 12px; }
+
+.spacer { flex: 1; }
+
+.pill {
+  font-size: 12px;
+  color: var(--muted);
+  border: 1px solid var(--line);
+  background: var(--panel);
+  padding: 4px 10px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+.pill b { color: var(--accent-2); font-weight: 600; }
+
+/* ---------- 布局 ---------- */
+main {
+  flex: 1;
+  display: grid;
+  grid-template-columns: minmax(420px, 1fr) minmax(420px, 1fr);
+  gap: 18px;
+  padding: 18px 22px 26px;
+  align-items: start;
+}
+@media (max-width: 980px) { main { grid-template-columns: 1fr; } }
+
+.card {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+.card-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--line);
+  font-size: 13px;
+  font-weight: 600;
+  color: #cdd8e6;
+}
+.card-head .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); }
+.card-body { padding: 16px; }
+
+/* ---------- 标签页 ---------- */
+.tabs { display: flex; gap: 6px; padding: 12px 16px 0; }
+.tab {
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--muted);
+  padding: 7px 14px;
+  border-radius: 9px 9px 0 0;
+  cursor: pointer;
+  font-size: 13px;
+  font-family: inherit;
+}
+.tab:hover { color: var(--text); background: var(--panel-2); }
+.tab.active { color: var(--text); background: var(--panel-2); border-color: var(--line); border-bottom-color: var(--panel-2); }
+
+.pane { display: none; padding: 16px; }
+.pane.active { display: block; }
+
+/* ---------- 按钮 ---------- */
+.btn {
+  appearance: none;
+  border: 1px solid var(--line);
+  background: var(--panel-2);
+  color: var(--text);
+  padding: 9px 16px;
+  border-radius: 9px;
+  font-size: 13px;
+  font-family: inherit;
+  cursor: pointer;
+  transition: .15s;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+.btn:hover:not(:disabled) { border-color: #3a4756; background: #232c38; }
+.btn:disabled { opacity: .45; cursor: not-allowed; }
+.btn.primary {
+  background: linear-gradient(135deg, var(--accent), #3b76e8);
+  border-color: transparent;
+  color: #fff;
+  font-weight: 600;
+  box-shadow: 0 4px 14px rgba(79, 140, 255, .28);
+}
+.btn.primary:hover:not(:disabled) { filter: brightness(1.08); }
+.btn.ghost { background: transparent; }
+.btn-row { display: flex; flex-wrap: wrap; gap: 9px; }
+
+/* ---------- 预览区 ---------- */
+.stage {
+  position: relative;
+  border: 1px dashed var(--line);
+  border-radius: 10px;
+  background: #0a0d11;
+  min-height: 240px;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  margin-top: 14px;
+}
+.stage video, .stage canvas, .stage img { max-width: 100%; max-height: 380px; display: block; }
+.stage .hint {
+  text-align: center;
+  color: var(--muted);
+  font-size: 13px;
+  padding: 30px 20px;
+  line-height: 2;
+}
+.stage .hint kbd {
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  border-bottom-width: 2px;
+  border-radius: 5px;
+  padding: 1px 6px;
+  font-size: 12px;
+  color: var(--text);
+}
+#selectCanvas { cursor: crosshair; }
+
+.sel-rect {
+  position: absolute;
+  border: 1.5px solid var(--accent);
+  background: rgba(79, 140, 255, .14);
+  box-shadow: 0 0 0 9999px rgba(0, 0, 0, .45);
+  pointer-events: none;
+  display: none;
+}
+
+/* ---------- 文本域 ---------- */
+textarea, input[type=text], input[type=password] {
+  width: 100%;
+  background: #0a0d11;
+  border: 1px solid var(--line);
+  color: var(--text);
+  border-radius: 9px;
+  padding: 10px 12px;
+  font: 13px/1.7 ui-monospace, Consolas, "Microsoft YaHei UI", monospace;
+  resize: vertical;
+  outline: none;
+}
+textarea:focus, input:focus { border-color: var(--accent); }
+label.field { display: block; margin-bottom: 10px; font-size: 12px; color: var(--muted); }
+label.field span { display: block; margin-bottom: 5px; }
+
+/* ---------- 结果 ---------- */
+.answer-box {
+  border: 1px solid var(--line);
+  background: linear-gradient(180deg, rgba(52, 211, 153, .10), rgba(52, 211, 153, .02));
+  border-radius: 10px;
+  padding: 14px 16px;
+  margin-bottom: 14px;
+}
+.answer-label { font-size: 12px; color: var(--muted); margin-bottom: 4px; }
+.answer-value {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--ok);
+  letter-spacing: .5px;
+  word-break: break-word;
+}
+.answer-value.none { font-size: 15px; color: var(--warn); font-weight: 500; }
+
+.meta-row { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
+.chip {
+  font-size: 12px;
+  padding: 3px 9px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  color: var(--muted);
+  background: var(--panel-2);
+}
+.chip.tag { color: var(--accent-2); border-color: rgba(34, 211, 238, .28); }
+.chip.good { color: var(--ok); border-color: rgba(52, 211, 153, .3); }
+.chip.warn { color: var(--warn); border-color: rgba(251, 191, 36, .3); }
+
+.section-title { font-size: 12px; color: var(--muted); margin: 0 0 6px; letter-spacing: .5px; }
+.analysis { white-space: pre-wrap; color: #cdd8e6; font-size: 13.5px; line-height: 1.85; }
+
+.question-text {
+  color: #dbe4ef;
+  font-size: 13.5px;
+  white-space: pre-wrap;
+  padding: 10px 12px;
+  border-left: 2px solid var(--accent);
+  background: rgba(79, 140, 255, .06);
+  border-radius: 0 8px 8px 0;
+  margin-bottom: 14px;
+}
+
+.options { list-style: none; padding: 0; margin: 0 0 14px; display: grid; gap: 6px; }
+.options li {
+  padding: 7px 11px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  font-size: 13px;
+  color: #c3cfdd;
+  background: var(--panel-2);
+}
+.options li.correct { border-color: rgba(52, 211, 153, .5); background: rgba(52, 211, 153, .10); color: #a7f3d0; }
+
+.candidates { display: grid; gap: 7px; }
+.cand {
+  display: flex; gap: 10px; align-items: center;
+  padding: 8px 11px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel-2);
+  cursor: pointer;
+  font-size: 12.5px;
+  color: #c3cfdd;
+  transition: .12s;
+}
+.cand:hover { border-color: var(--accent); }
+.cand .sc { margin-left: auto; color: var(--muted); font-variant-numeric: tabular-nums; }
+.cand .txt { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.empty { color: var(--muted); font-size: 13px; text-align: center; padding: 26px 12px; line-height: 2; }
+
+/* ---------- 进度 ---------- */
+.progress {
+  height: 3px;
+  background: var(--line);
+  border-radius: 3px;
+  overflow: hidden;
+  margin-top: 12px;
+  display: none;
+}
+.progress.on { display: block; }
+.progress > i {
+  display: block;
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, var(--accent), var(--accent-2));
+  transition: width .25s;
+}
+.status { font-size: 12px; color: var(--muted); margin-top: 8px; min-height: 18px; }
+.status.err { color: var(--err); }
+.status.ok { color: var(--ok); }
+
+/* ---------- 设置抽屉 ---------- */
+.drawer {
+  position: fixed;
+  inset: 0 0 0 auto;
+  width: min(420px, 92vw);
+  background: var(--panel);
+  border-left: 1px solid var(--line);
+  transform: translateX(105%);
+  transition: transform .22s ease;
+  z-index: 40;
+  display: flex;
+  flex-direction: column;
+  box-shadow: -20px 0 60px rgba(0, 0, 0, .5);
+}
+.drawer.open { transform: none; }
+.drawer-head { display: flex; align-items: center; padding: 16px 18px; border-bottom: 1px solid var(--line); }
+.drawer-body { padding: 18px; overflow: auto; }
+.mask {
+  position: fixed; inset: 0; background: rgba(0, 0, 0, .5);
+  opacity: 0; pointer-events: none; transition: .2s; z-index: 30;
+}
+.mask.on { opacity: 1; pointer-events: auto; }
+.note { font-size: 12px; color: var(--muted); line-height: 1.8; }
+code { background: var(--panel-2); padding: 1px 5px; border-radius: 4px; font-size: 12px; }
+
+.answer-value.long {
+  font-size: 14.5px;
+  font-weight: 500;
+  color: #d6f5e7;
+  line-height: 1.85;
+  letter-spacing: 0;
+}
+
+/* ---------- 语音输入 ---------- */
+.voice-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 0 6px;
+}
+
+.mic {
+  position: relative;
+  width: 78px; height: 78px;
+  border-radius: 50%;
+  border: 1px solid var(--line);
+  background: var(--panel-2);
+  color: var(--accent);
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  transition: .18s;
+}
+.mic:hover:not(:disabled) { border-color: var(--accent); background: #232c38; }
+.mic:disabled { opacity: .4; cursor: not-allowed; }
+.mic.on {
+  background: linear-gradient(135deg, #ef4444, #b91c1c);
+  border-color: transparent;
+  color: #fff;
+  box-shadow: 0 0 0 0 rgba(239, 68, 68, .55);
+  animation: micPulse 1.6s infinite;
+}
+@keyframes micPulse {
+  0%   { box-shadow: 0 0 0 0 rgba(239, 68, 68, .55); }
+  70%  { box-shadow: 0 0 0 18px rgba(239, 68, 68, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+}
+
+.voice-tip { font-size: 12.5px; color: var(--muted); text-align: center; line-height: 1.9; }
+
+.voice-live {
+  margin-top: 14px;
+  min-height: 96px;
+  max-height: 220px;
+  overflow: auto;
+  background: #0a0d11;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 12px 14px;
+  font-size: 14.5px;
+  line-height: 1.9;
+  color: #dbe4ef;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.voice-live .ph { color: #56606e; }
+.voice-live .interim { color: var(--muted); }
+.voice-live .listening { color: var(--accent-2); font-size: 12px; }
+
+.voice-note { font-size: 12px; color: var(--muted); margin-top: 10px; line-height: 1.8; }
+.voice-note.err { color: var(--err); }
+
+/* ---------- 麦克风自检 ---------- */
+.meter {
+  height: 10px;
+  margin-top: 12px;
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  overflow: hidden;
+}
+.meter > i {
+  display: block;
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, var(--ok), var(--warn));
+  transition: width .08s linear;
+}
+
+pre.diag {
+  margin-top: 12px;
+  padding: 12px 14px;
+  background: #0a0d11;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  font: 12px/1.9 ui-monospace, Consolas, "Microsoft YaHei UI", monospace;
+  color: #c3cfdd;
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 260px;
+  overflow: auto;
+}
+
+/* 单列布局（只保留文字输入时） */
+main.single {
+  grid-template-columns: minmax(0, 1fr);
+  max-width: 900px;
+  width: 100%;
+  margin: 0 auto;
+}
+main.single .card + .card { margin-top: 4px; }
+</style>
+<style>
+/* 手机端适配 */
+body { -webkit-text-size-adjust: 100%; }
+header { padding: calc(10px + env(safe-area-inset-top)) 14px 10px; }
+main.single {
+  padding: 12px 12px calc(28px + env(safe-area-inset-bottom));
+  gap: 12px;
+}
+h1 { font-size: 14px; }
+h1 small { display: none; }
+textarea { font-size: 16px !important; line-height: 1.8; }  /* 16px 防止安卓/iOS 自动缩放 */
+.btn { min-height: 44px; padding: 11px 18px; font-size: 15px; }
+.btn-row { gap: 10px; }
+.btn-row .btn { flex: 1; justify-content: center; }
+.answer-value { font-size: 26px; }
+.answer-value.long { font-size: 15px; }
+.options li { padding: 10px 12px; font-size: 14px; }
+.cand { padding: 11px 12px; font-size: 13px; }
+.card-body { padding: 14px; }
+.pane { padding: 14px; }
+.chip { font-size: 11.5px; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">搜</div>
+  <h1>题库搜题<small>离线版</small></h1>
+  <div class="spacer"></div>
+  <span class="pill" id="bankCount">题库加载中…</span>
+</header>
+
+<main class="single">
+  <section class="card">
+    <div class="card-head"><span class="dot"></span>输入题目</div>
+    <div class="pane active" style="display:block">
+      <label class="field">
+        <span>粘贴或输入题干（停顿 0.6 秒自动查询）</span>
+        <textarea id="q" rows="6" placeholder="例：汽轮机禁止启动项有哪些"></textarea>
+      </label>
+      <div class="btn-row">
+        <button class="btn primary" id="go">立即查询</button>
+        <button class="btn ghost" id="clear">清空</button>
+      </div>
+      <div class="status" id="status" style="margin-top:10px"></div>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="card-head"><span class="dot" style="background:var(--ok)"></span>结果</div>
+    <div class="card-body" id="result">
+      <div class="empty">还没有结果<br><span style="font-size:12px">在上面输入题目，答案会出现在这里</span></div>
+    </div>
+  </section>
+</main>
+
+<script>window.__BANK__ = [{"id":"xz-001","question":"当风量不足，油燃烧火焰呈（ ）","options":["A. 白色","B. 暗红色","C. 橙色"],"answer":"B","analysis":"","tags":["单选"]},{"id":"xz-002","question":"蒸汽流量不正常地小于给水流量炉膛负压变正，过热蒸汽压力降低，说明（ ）","options":["A. 再热器损坏","B. 省煤器损坏","C. 过热器损坏"],"answer":"C","analysis":"","tags":["单选"]},{"id":"xz-003","question":"锅炉送风量越大，烟气量越多，烟气流速越大，烟气温度就越高，则再热器的吸热量（ ）","options":["A. 越小","B. 越大","C. 不变。在外界负荷不变的情况下，汽压的稳定要取决于","D. 。炉膛热强度的大小","E. 炉内燃烧工况的稳定","F. 锅炉的储热能力。防止制粉系统爆炸的主要措施有","G. 解决制粉系统的积粉、消除火源、控制系统温度","H. 认真监盘、精心调整","undefined. 防止运行中断煤","undefined. 出口温度连锁保护"],"answer":"B","analysis":"","tags":["单选"]},{"id":"xz-004","question":"在动力燃烧过程中，要强化燃烧，必须设法（ ）","options":["A. 供应合适的空气量","B. 提高炉膛温度","C. 改善煤粉与空气的混合情况","D. 保证足够的燃烧时间"],"answer":"B","analysis":"","tags":["单选"]},{"id":"xz-005","question":"在监盘时，如看到风机在电流过大或摆动幅度大的情况下跳闸，则（ ）","options":["A. 可以强行启动一次","B. 可以在就地监视下启动","C. 不应再强行启动","D. 请求领导决定"],"answer":"C","analysis":"","tags":["单选"]},{"id":"xz-006","question":"煤中的水分增加时，将使炉膛的辐射吸热量（ ）","options":["A. 增加","B. 减小","C. 不变","D. 不确定"],"answer":"B","analysis":"","tags":["单选"]},{"id":"xz-007","question":"省煤器利用锅炉尾部烟气热量来加热（ ）","options":["A. 锅炉给水","B. 空气","C. 燃料","D. 其他"],"answer":"A","analysis":"","tags":["单选"]},{"id":"xz-008","question":"在允许范围内，尽可能保持高的蒸汽温度和蒸汽压力可使（ ）","options":["A. 锅炉热效率下降","B. 锅炉热效率提高","C. 循环热效率提高","D. 对效率无影响。对于汽包锅炉，当水冷壁结渣后，过热汽温","E. 。升高","F. 降低","G. 不变","H. 不确定"],"answer":"C","analysis":"","tags":["单选"]},{"id":"xz-009","question":"中间再热锅炉在锅炉启动过程中，保护再热器的手段有（ ）","options":["A. 控制烟气温度或正确使用一、二级旁路","B. 加强疏水","C. 轮流切换四角油枪，使再热器受热均匀","D. 调节摆动燃烧器和烟风机挡板"],"answer":"A","analysis":"","tags":["单选"]},{"id":"xz-010","question":"就地水位计指示的水位高度，比汽包的实际水位高度（ ）","options":["A. 要高","B. 要低","C. 相等","D. 稳定"],"answer":"B","analysis":"","tags":["单选"]},{"id":"xz-011","question":"汽包水位低于极限值时，应该（ ）","options":["A. 紧急停炉","B. 申请停炉","C. 减负荷","D. 加强给水"],"answer":"A","analysis":"","tags":["单选"]},{"id":"xz-012","question":"在外界负荷不变的情况下，汽压的稳定要取决于（ ）","options":["A. 炉膛热强度的大小","B. 炉内燃烧工况的稳定","C. 锅炉的储热能力"],"answer":"B","analysis":"","tags":["单选"]},{"id":"xz-013","question":"燃煤中的水份增加时，将使对流过热器的吸热量（ ）","options":["A. 增加","B. 减少","C. 不变"],"answer":"A","analysis":"","tags":["单选"]},{"id":"xz-014","question":"在一般负荷范围内，当炉膛出口过剩空气系数过大时会造成（ ）","options":["A. q3损失降低，q4损失增大","B. q3、q4损失降低","C. q3损失降低、q 2损失增大、q4损失可能增大"],"answer":"C","analysis":"","tags":["单选"]},{"id":"xz-015","question":"在外界负荷不变时，强化燃烧时汽包水位将会（ ）","options":["A. 上升","B. 下降","C. 先上升后降低"],"answer":"B","analysis":"","tags":["单选"]},{"id":"xz-016","question":"当火焰中心位置上移时，炉内（ ）","options":["A. 辐射吸热量减少，过热汽温升高","B. 辐射吸热量增加，过热汽温降低","C. 辐射吸热量减少，过热汽温降低"],"answer":"A","analysis":"","tags":["单选"]},{"id":"xz-017","question":"过热器前的受热面长时间不吹灰或水冷壁结焦会造成（ ）","options":["A. 过热器汽温偏高","B. 过热汽温降低","C. 水冷壁吸热量增加"],"answer":"A","analysis":"","tags":["单选"]},{"id":"xz-018","question":"煤粉气流着火的热源主要来自（ ）","options":["A. 炉内高温烟气的直接混入","B. 炉膛的辐射热量","C. 二次风的热量."],"answer":"A","analysis":"","tags":["单选"]},{"id":"xz-019","question":"凝结器的真空上升到一定值时汽机的效率最大，此时的真空称为（ ）","options":["A. 绝对真空","B. 极限真空","C. 最佳真空"],"answer":"C","analysis":"","tags":["单选"]},{"id":"xz-020","question":"给水泵发生（ ）情况时应紧急故障停泵。","options":["A. 给水泵入口法兰漏水","B. 给水泵和电机振动幅","C. 度达0.06毫米","D. 给水泵内部有清晰的摩擦声或冲击声"],"answer":"C","analysis":"","tags":["单选"]},{"id":"xz-021","question":"凝汽器真空提高时，容易过负荷级段为（ ）","options":["A. 调节级速级","B. 中间级","C. 末级","D. 复速级"],"answer":"C","analysis":"","tags":["单选"]},{"id":"xz-022","question":"其他条件不变，主蒸汽温度升高时，蒸汽在机内有效焓降为（ ）","options":["A. 增加","B. 减小","C. 不变"],"answer":"A","analysis":"","tags":["单选"]},{"id":"xz-023","question":"启动时，当转子在一阶临界转速以下，汽轮机轴承振动值达（ ）必须打闸停机。","options":["A. 0.02mm","B. 0.10mm","C. 0.05mm","D. 0.03mm"],"answer":"D","analysis":"","tags":["单选"]},{"id":"xz-024","question":"盘车期间，密封瓦供油（ ）","options":["A. 不能中断","B. 可以中断","C. 发电机无氢压时可以中断","D. 无明确要求"],"answer":"A","analysis":"","tags":["单选"]},{"id":"xz-025","question":"采用滑参数方式停机时，（ ）做汽轮机超速试验。","options":["A. 可以","B. 采取安全措施后","C. 严禁","D. 领导批准后"],"answer":"C","analysis":"","tags":["单选"]},{"id":"xz-026","question":"转子在静止时严禁（ ），以免转子产生热弯曲。","options":["A. 向轴封供汽","B. 拉真空","C. 对发电机进行投、倒氢工作","D. 投用油系统"],"answer":"A","analysis":"","tags":["单选"]},{"id":"xz-027","question":"汽轮机热态起动时若出现负胀差主要原因是（ ）","options":["A. 冲转时蒸汽温度过高","B. 冲转时主汽温度过低","C. 暖机时间过长","D. 暖机时间过短"],"answer":"B","analysis":"","tags":["单选"]},{"id":"xz-028","question":"正常运行时，汽轮机组保护系统的四个AST电磁阀是（ ）","options":["A. 得电打开","B. 失电关闭","C. 得电关闭","D. 失电打开"],"answer":"D","analysis":"","tags":["单选"]},{"id":"xz-029","question":"提高机组的循环热效率的方法之一是（ ）","options":["A. 降低新蒸汽温度","B. 提高新蒸汽温度和压力","C. 提高排汽压力","D. 增大新蒸汽流量"],"answer":"B","analysis":"","tags":["单选"]},{"id":"xz-030","question":"汽轮机凝汽器管内结垢可造成（ ）","options":["A. 传热增强，管壁温度升高","B. 传热减弱，管壁温度降低","C. 传热增强，管壁温度降低","D. 传热减弱，管壁温度升高"],"answer":"B","analysis":"","tags":["单选"]},{"id":"xz-031","question":"汽轮机热态启动时，若出现负差胀，主要原因是（ ）","options":["A. 冲转时蒸汽温度偏低","B. 冲转时蒸汽温度偏高; 冲转时升速率偏大","C. 冲转时升速率偏小"],"answer":"A","analysis":"","tags":["单选"]},{"id":"xz-032","question":"水泵发生倒转时应（ ）","options":["A. 关闭入口门","B. 关闭出口门","C. 立即合闸启动","D. 无影响"],"answer":"B","analysis":"","tags":["单选"]},{"id":"xz-033","question":"发电机冷却水中断超过（ ）保护拒动时，应手动停机。","options":["A. 60s","B. 30s","C. 90s","D. 120s"],"answer":"B","analysis":"","tags":["单选"]},{"id":"xz-034","question":"汽轮机热态启动冲转前要连续盘车不少于（ ）","options":["A. 6h","B. 4h","C. 2h","D. 8h"],"answer":"B","analysis":"","tags":["单选"]},{"id":"xz-035","question":"汽轮机停机后，转子弯曲值增加是由于（ ）造成的。","options":["A. 上下缸温差大","B. 汽缸内有剩余蒸汽","C. 汽缸疏水不畅","D. 转子与汽缸温差大"],"answer":"A","analysis":"","tags":["单选"]},{"id":"xz-036","question":"汽轮机主蒸汽温度在10min内急剧下降（ ）时，应打闸停机。","options":["A. 40℃","B. 50℃","C. 60℃","D. 70℃"],"answer":"B","analysis":"","tags":["单选"]},{"id":"xz-037","question":"汽轮机停机后未能及时投入盘车或盘车在运行中停止时，应查明原因，盘车修复后（ ），再投入连续盘车。","options":["A. 先盘90°","B. 先盘180°","C. 先盘180°直轴","D. 先盘90°直轴"],"answer":"C","analysis":"","tags":["单选"]},{"id":"xz-038","question":"发电机内冷水水中断超过（ ）保护拒动时，应手动停机。","options":["A. 60s","B. 30s","C. 90s","D. 120s"],"answer":"B","analysis":"","tags":["单选"]},{"id":"xz-039","question":"真空严密性试验合格标准是（ ）","options":["A. 0.4kPa/min","B. 0.13kPa/min","C. 0.27kPa/m in","D. 2kPa/min"],"answer":"C","analysis":"","tags":["单选"]},{"id":"xz-040","question":"处于动态平衡的汽、液共存的状态叫（ ）","options":["A. 饱和状态","B. 不饱和状态","C. 过热状态","D. 再热状态"],"answer":"A","analysis":"","tags":["单选"]},{"id":"xz-041","question":"受热面定期吹灰的目的是（ ）","options":["A. 减少热阻","B. 降低受热面的壁温差","C. 降低工质的温度","D. 降低烟气温度"],"answer":"A","analysis":"","tags":["单选"]},{"id":"xz-042","question":"空气预热器的直接作用是（ ）","options":["A. 利用锅炉尾部烟气加热空气","B. 加强锅炉燃烧","C. 降低排烟温度","D. 提高锅炉效率"],"answer":"A","analysis":"","tags":["单选"]},{"id":"xz-043","question":"巡检发现转动设备威胁到人身及设备安全时，应（ ）","options":["A. 先启动备用设备，再停止故障设备","B. 立即用事故按钮紧急停运","C. 立即汇报上级","D. 按当时实际情况观察处理"],"answer":"B","analysis":"","tags":["单选"]},{"id":"xz-044","question":"一经操作既有电压的电气设备称为（ ）","options":["A. 热备用","B. 冷备用","C. 检修","D. 运行"],"answer":"A","analysis":"","tags":["单选"]},{"id":"xz-045","question":"低氧燃烧时，产生的（ ）较少。","options":["A. 硫","B. 二氧化硫","C. 三氧化硫","D. 三氧化碳"],"answer":"C","analysis":"","tags":["单选"]},{"id":"xz-046","question":"空气预热器是利用锅炉尾部烟气热量来加热锅炉燃烧所用的（ ）","options":["A. 给水","B. 空气","C. 燃料","D. 燃油"],"answer":"B","analysis":"","tags":["单选"]},{"id":"xz-047","question":"锅炉正常停炉一般是指（ ）","options":["A. 计划检修停炉","B. 非计划检修停炉","C. 因事故停炉","D. 节日检修"],"answer":"A","analysis":"","tags":["单选"]},{"id":"xz-048","question":"锅炉发生水位事故|运行人员未能采取正确及时的措施予以处理时，将会造成（ ）","options":["A. 设备严重损坏","B. 机组停运","C. 机组停动、甚至事故扩大","D. 人员伤亡"],"answer":"A","analysis":"","tags":["单选"]},{"id":"xz-049","question":"锅炉运行过程中，机组负荷变化，应调节（ ）流量。","options":["A. 给水泵","B. 凝结水泵","C. 循环水泵","D. 冷却水泵"],"answer":"A","analysis":"","tags":["单选"]},{"id":"xz-050","question":"再热汽温采用喷水调节比烟气侧调节的经济性（ ）","options":["A. 好","B. 差","C. 相同","D. 以上三种答案都不是"],"answer":"B","analysis":"","tags":["单选"]},{"id":"xz-051","question":"锅炉使用的风机有（ ）","options":["A. 送、吸风机、一次风机、排粉机、密封风机","B. 点火增压风机","C. 吸、送风机","D. 轴流风机、离心风机"],"answer":"A","analysis":"","tags":["单选"]},{"id":"xz-052","question":"燃煤中灰分熔点越高，（ ）","options":["A. 越不容易结焦","B. 越容易结焦","C. 越容易灭火","D. 越容易着火"],"answer":"A","analysis":"","tags":["单选"]},{"id":"xz-053","question":"在燃烧过程中，未燃烧的固体可燃物随飞灰和炉渣一同排出炉外而造成的热损失叫（ ）","options":["A. 散热损失","B. 化学不完全燃烧损失","C. 排烟热损失","D. 机械不完成热损失"],"answer":"D","analysis":"","tags":["单选"]},{"id":"xz-054","question":"当炉内空气量不足时，煤燃烧火焰是（ ）","options":["A. 白色","B. 暗红色","C. 橙色","D. 红色"],"answer":"B","analysis":"","tags":["单选"]},{"id":"xz-055","question":"停炉时间超过（ ），需要将原煤仓内的煤烧空，以防止托煤。","options":["A. 7天","B. 15天","C. 30天","D. 40天"],"answer":"A","analysis":"","tags":["单选"]},{"id":"xz-056","question":"锅炉煤灰的熔点主要与灰的（ ）有关。","options":["A. 组成部分","B. 物理形态","C. 硬度","D. 可磨性"],"answer":"A","analysis":"","tags":["单选"]},{"id":"xz-057","question":"挥发份含量对燃料燃烧特性影响很大，挥发份含量高，则容易燃烧，（ ）的挥发份含量高，故很容易着火燃烧。","options":["A. 无烟煤","B. 烟煤","C. 贫煤","D. 石子煤"],"answer":"B","analysis":"","tags":["单选"]},{"id":"xz-058","question":"炉膛负压和烟道负压剧烈变化，排烟温度不正常升高，烟气中含氧量下降，热风温度，省煤器出口温度等介质温度不正常升高，此现象表明发生（ ）","options":["A. 烟道再燃烧","B. 送风机挡板摆动","C. 锅炉灭火","D. 吸风机挡板摆动"],"answer":"A","analysis":"","tags":["单选"]},{"id":"xz-059","question":"《电力技术管理法规》规定：停炉后一般（ ）小时后启动吸风机通风冷却。","options":["A. 8","B. 12","C. 18","D. 30"],"answer":"C","analysis":"","tags":["单选"]},{"id":"xz-060","question":"燃煤中的水分增加时，将使对流过热器的吸热量（ ）","options":["A. 增加","B. 减少","C. 不变","D. 按对数关系减少"],"answer":"A","analysis":"","tags":["单选"]},{"id":"xz-061","question":"汽包内汽水分离装置波形板分离器主要是利用（ ）原理。","options":["A. 重力分离","B. 惯性分离","C. 离心分离","D. 水膜分离"],"answer":"D","analysis":"","tags":["单选"]},{"id":"xz-062","question":"双绕组变压器做为发电厂的主变压器，一般采用（ ）接线。","options":["A. YNyO","B. YNd11","C. YNd1","D. YNy6"],"answer":"B","analysis":"","tags":["单选"]},{"id":"xz-063","question":"导致变压器重瓦斯保护动作的因素为（ ）","options":["A. 气体体积","B. 气体浓度","C. 油气流速","D. 可燃气体含量"],"answer":"C","analysis":"","tags":["单选"]},{"id":"xz-064","question":"并联运行的变压器，最大最小容量比不超过（ ）","options":["A. 2:1","B. 3:1","C. 4:1","D. 5:1"],"answer":"B","analysis":"","tags":["单选"]},{"id":"xz-065","question":"提高系统暂态稳定性措施有（ ）","options":["A. 快速切除故障","B. 不切除故障","C. 重合闸不成功","D. 故障加大 71-140"],"answer":"A","analysis":"","tags":["单选"]},{"id":"xz-066","question":"电动机铭牌上的“温升”指的是（）的允许温升。","options":["A. 定子绕组","B. 定子铁芯","C. 转子","D. 冷却风温"],"answer":"A","analysis":"","tags":["单选"]},{"id":"xz-067","question":"纵差保护区为（ ）","options":["A. 被保护设备内部","B. 差动保护用几组TA之间","C. TA之外","D. TA与被保护设备间"],"answer":"B","analysis":"","tags":["单选"]},{"id":"xz-068","question":"为防止水内冷机发电机因断水引起定子绕组超温损坏所装设的保护叫（）保护。","options":["A. 超温","B. 断水","C. 定子水","D. 水位"],"answer":"B","analysis":"","tags":["单选"]},{"id":"xz-069","question":"发电机的（）是发电机定子绕组及其引出线相间短路时的主保护。","options":["A. 横差","B. 纵差","C. 匝间","D. 接地保护"],"answer":"B","analysis":"","tags":["单选"]},{"id":"xz-070","question":"发电机有功不变的前提下，增加励磁后（ ）","options":["A. 定子电流增大","B. 定子电流减小","C. 定子电流不变","D. 损耗减小"],"answer":"A","analysis":"","tags":["单选"]},{"id":"xz-071","question":"运行中应经常监视电动机电流的变化，不允许超过（ ）","options":["A. 额定电流的2倍","B. 额定电流","C. 额定电流的3倍","D. 额定电流的1.5倍"],"answer":"B","analysis":"","tags":["单选"]},{"id":"xz-072","question":"一个体重60公斤的人，约有血液：","options":["A. 3000毫升","B. 6000毫升","C. 4800毫升"],"answer":"C","analysis":"","tags":["单选"]},{"id":"xz-073","question":"用人单位职业病防治的法定责任者是（ ）","options":["A. 主要负责人","B. 劳动者","C. 医疗机构","D. 国家"],"answer":"A","analysis":"","tags":["单选"]},{"id":"xz-074","question":"与热力和机械相关的工作人员应按本部分（）考试一次。","options":["A. 每半年","B. 每三个月","C. 每年"],"answer":"C","analysis":"","tags":["单选"]},{"id":"xz-075","question":"油管道不宜用（）连接。","options":["A. 焊接","B. 螺栓","C. 法兰盘"],"answer":"C","analysis":"","tags":["单选"]},{"id":"xz-076","question":"所有高温的管道、容器等设备上都应有（），保温层应保证完整。","options":["A. 防护罩","B. 标志","C. 保温"],"answer":"C","analysis":"","tags":["单选"]},{"id":"xz-077","question":"禁止利用任何管道、栏杆、脚手架（）重物和起吊设备。","options":["A. 起吊","B. 悬吊","C. 支撑"],"answer":"B","analysis":"","tags":["单选"]},{"id":"xz-078","question":"楼板、平台应有明显的允许（ ）","options":["A. 荷载标志","B. 安全标志","C. 警告标志"],"answer":"A","analysis":"","tags":["单选"]},{"id":"xz-079","question":"易燃、易爆、（），高噪音以及对周边环境可能产生污染的设备、设施、场所，在符合相关技术标准的前提下，应远离人员聚集场所。","options":["A. 化学危险品","B. 有毒危险品","C. 粉尘"],"answer":"B","analysis":"","tags":["单选"]},{"id":"xz-080","question":"大功率机组主油泵，大都采用主轴直接带动的离心泵。此类泵的缺点是（），启动前必须使吸油管充满油。","options":["A. 升压太快","B. 自吸能力太强","C. 自吸能力低"],"answer":"C","analysis":"","tags":["单选"]},{"id":"xz-081","question":"机械超速保护试验，两次动作转速差值应小于（），才能算合格。","options":["A. 16r/min","B. 18r/min","C. 30r/min","D. 9r/min."],"answer":"B","analysis":"","tags":["单选"]},{"id":"xz-082","question":"燃煤中的灰分熔点越高，则（ ）","options":["A. 越不容易结焦","B. 越容易结焦","C. 越容易灭火","D. 越燃烧稳定"],"answer":"A","analysis":"","tags":["单选"]},{"id":"xz-083","question":"实际空气量与理论空气量之比称为（ ）","options":["A. 过剩空气系数","B. 最佳过剩空气系数","C. 漏风系数","D. 漏风率"],"answer":"A","analysis":"","tags":["单选"]},{"id":"xz-084","question":"锅炉水循环的循环倍率越大，水循环（ ）","options":["A. 越危险","B. 越可靠","C. 无影响","D. 阻力增大"],"answer":"B","analysis":"","tags":["单选"]},{"id":"xz-085","question":"汽包锅炉点火初期是一个非常不稳定的运行阶段，为确保安全，（ ）","options":["A. 应投入锅炉所有保护","B. 应加强监视调整","C. 应加强联系制度","D. 应加强监护制度"],"answer":"A","analysis":"","tags":["单选"]},{"id":"xz-086","question":"风机在工作过程中，不可避免地会发生流体（），以及风机本身的传动部分产生摩擦损失。","options":["A. 摩擦","B. 撞击","C. 泄漏","D. 摩擦、撞击、泄漏"],"answer":"D","analysis":"","tags":["单选"]},{"id":"xz-087","question":"低温腐蚀是（）腐蚀。","options":["A. 碱性","B. 酸性","C. 中性","D. 氧"],"answer":"B","analysis":"","tags":["单选"]},{"id":"xz-088","question":"中速磨煤机的转速为（ ）","options":["A. 30-50 r/min","B. 50-300 r/min","C. 50-200 r/min","D. 25-120 r/min"],"answer":"D","analysis":"","tags":["单选"]},{"id":"xz-089","question":"锅炉水冷壁管管内结垢可造成（ ）","options":["A. 传热增强，管壁温度升高","B. 传热减弱，管壁温度降低","C. 传热增强，管壁温度降低","D. 传热減弱，管壁温度升高"],"answer":"D","analysis":"","tags":["单选"]},{"id":"xz-090","question":"在锅炉水循环回路中，当出现循环倒流时，将引起（ ）","options":["A. 爆管","B. 循环流速加快","C. 水循环不良","D. 循环流速降低"],"answer":"C","analysis":"","tags":["单选"]},{"id":"xz-091","question":"机组正常启动过程中，最先启动的设备是（ ）","options":["A. 吸风机","B. 送风机","C. 空气预热器","D. 一次风机"],"answer":"C","analysis":"","tags":["单选"]},{"id":"xz-092","question":"为保证吹灰效果，锅炉吹灰的程序是（ ）","options":["A. 由炉膛依次向后进行","B. 自锅炉尾部向前进行","C. 吹灰时由运行人员自己决定","D. 由值长决定"],"answer":"A","analysis":"","tags":["单选"]},{"id":"xz-093","question":"煤粉在燃烧过程中（）所用的时间最长。","options":["A. 着火前准备阶段","B. 燃烧阶段","C. 燃尽阶段","D. 着火阶段"],"answer":"C","analysis":"","tags":["单选"]},{"id":"xz-094","question":"锅炉“MFT”动作后，联锁（）跳闸。","options":["A. 送风机","B. 引风机","C. 空气预热器","D. 一次风机"],"answer":"D","analysis":"","tags":["单选"]},{"id":"xz-095","question":"水冷壁受热面无论是积灰、结渣或积垢，都会使炉膛出口烟温（ ）","options":["A. 不变","B. 增高","C. 降低","D. 突然降低"],"answer":"B","analysis":"","tags":["单选"]},{"id":"xz-096","question":"标准煤发热量为（ ）","options":["A. 20934kj","B. 29271.2 Kj","C. 25120.8 kj","D. 12560.4 kj"],"answer":"C","analysis":"","tags":["单选"]},{"id":"xz-097","question":"《安全生产法》规定，特种作业人员必须经专门的安全作业培训。取得（），方可上岗作业。","options":["A. 特种作业操作资格证书","B. 培训合格证书","C. 相应特种作业操作资格 证书","D. 特种作业操作合格证书"],"answer":"C","analysis":"","tags":["单选"]},{"id":"xz-098","question":"发现有人触电，应立即（），使触电人脱离电源，并进行急救。如在高空工作，抢救时必须采取防止高处坠落的措施。","options":["A. 汇报","B. 叫人救援","C. 切断电源"],"answer":"C","analysis":"","tags":["单选"]},{"id":"xz-099","question":"任何电气设备上的标示牌，除（）人员或负责的运行值班人员外，其他任何人员不准移动。","options":["A. 工作负责人","B. 检修","C. 原来放置"],"answer":"C","analysis":"","tags":["单选"]},{"id":"xz-100","question":"清拭运转中机器的固定部分时，严禁（）或将抹布缠在手上使用。","options":["A. 戴手套","B. 赤手","C. 用工具"],"answer":"A","analysis":"","tags":["单选"]},{"id":"xz-101","question":"任何人进人（）（），必须戴好安全帽。","options":["A. 厂区","B. 生产现场 办公室、控制室、值班室和检修班组室除外","C. 车间"],"answer":"B","analysis":"","tags":["单选"]},{"id":"xz-102","question":"保障人民群众（）安全，是制定《安全生产法》的目的之一。","options":["A. 生命","B. 财产","C. 生命和财产","D. 生命和健康"],"answer":"C","analysis":"","tags":["单选"]},{"id":"xz-103","question":"工会依法对安全生产工作进行（ ）","options":["A. 检查","B. 监督","C. 全面协调","D. 管理"],"answer":"B","analysis":"","tags":["单选"]},{"id":"xz-104","question":"电力系统在运行中，突然短路引起的过电压叫做（）过电压。","options":["A. 大气","B. 操作","C. 弧光接地","D. 电气"],"answer":"C","analysis":"","tags":["单选"]},{"id":"xz-105","question":"加速绝缘老化的主要原因是使用的（ ）","options":["A. 电压过高","B. 电流过大","C. 温度过高","D. 绝缘材料不合格"],"answer":"C","analysis":"","tags":["单选"]},{"id":"xz-106","question":"油浸风冷变压器当风扇故障时变压器允许带负荷为额定容量的（ ）","options":["A. 65%","B. 70%","C. 75%","D. 80％"],"answer":"B","analysis":"","tags":["单选"]},{"id":"xz-107","question":"触电电流的途径一般认为（）是最危险的电流途径。","options":["A. 从手到脚","B. 从手到手","C. 从脚到脚"],"answer":"A","analysis":"","tags":["单选"]},{"id":"xz-108","question":"目前大型汽轮发电机组多采用内冷方式，冷却介质为（ ）","options":["A. 水","B. 氢气和水","C. 氢气","D. 水和空气"],"answer":"B","analysis":"","tags":["单选"]},{"id":"xz-109","question":"发电机定子冷却水中（）的多少是衡量铜腐蚀程度的重要依据。","options":["A. 电导率","B. 含铜量","C. PH值","D. 钠离子"],"answer":"B","analysis":"","tags":["单选"]},{"id":"xz-110","question":"直流电动机的换向过程，是一个比较复杂的过程，换向不良的直接后果是（ ）","options":["A. 电刷产生火花","B. 电刷发热碎裂","C. 电刷跳动","D. 电刷磨损严重"],"answer":"A","analysis":"","tags":["单选"]},{"id":"xz-111","question":"不同的绝缘材料，其耐热能力不同。如果长时间在高于绝缘材料的耐热能力下运行，绝缘材料容易（ ）","options":["A. 开裂","B. 老化","C. 破碎","D. 变脆"],"answer":"B","analysis":"","tags":["单选"]},{"id":"xz-112","question":"国家规定变压器绕组允许温升（）的根据是以A级绝缘为基础的。","options":["A. 60°C；B65°C","B. 70°C","C. 80°C"],"answer":"B","analysis":"","tags":["单选"]},{"id":"xz-113","question":"直流电动机的换向过程，是一个比较复杂的过程，换向不良的直接后果是（）。A、电刷产生火花；","options":["A. 电刷发热碎裂","B. 电刷跳动","C. 电刷磨损严重"],"answer":"A","analysis":"","tags":["单选"]},{"id":"xz-114","question":"挥发分20%~40%的煤称为（ ）","options":["A. 无烟煤","B. 烟煤","C. 贫煤","D. 褐煤"],"answer":"B","analysis":"","tags":["单选"]},{"id":"xz-115","question":"()损失是锅炉热损失中损失最大的一项。","options":["A. 排烟热损失","B. 化学不完全燃烧热损失","C. 机械不完全燃烧热损失","D. 散热损失"],"answer":"A","analysis":"","tags":["单选"]},{"id":"xz-116","question":"变压运行时，()保持不变。","options":["A. 蒸汽温度","B. 蒸汽流量","C. 负荷","D. 蒸汽压力"],"answer":"A","analysis":"","tags":["单选"]},{"id":"xz-117","question":".防止制粉系统爆炸的主要措施有（ ）","options":["A. 解决制粉系统的积粉、消除火源、控制系统温度","B. 认真监盘、精心调整","C. 防止运行中断煤","D. 出口温度连锁保护"],"answer":"A","analysis":"","tags":["单选"]},{"id":"xz-118","question":"轴流式风机（ ）","options":["A. 流量大、风压大","B. 流量小、风压小","C. 流量大、风压低","D. 不一定"],"answer":"C","analysis":"","tags":["单选"]},{"id":"xz-119","question":"锅炉过热蒸汽温度调节系统中，被调量是（ ）","options":["A. 过热器出口汽温","B. 减温水量","C. 减温阀开度"],"answer":"A","analysis":"","tags":["单选"]},{"id":"xz-120","question":"标准煤的发热量为（ ）","options":["A. 20934千焦","B. 25120.8千焦","C. 29271.2千焦"],"answer":"C","analysis":"","tags":["单选"]},{"id":"xz-121","question":"挥发分含量对燃料燃烧特性影响很大，挥发分含量高则容易燃烧，()的挥发分含量高，故很容易燃烧。","options":["A. 无烟煤","B. 烟煤","C. 褐煤","D. 贫煤"],"answer":"C","analysis":"","tags":["单选"]},{"id":"xz-122","question":"()的分子间隙最大。(A)液体；(B) 气体；","options":["A. 固体","B. 液固共存"],"answer":"B","analysis":"","tags":["单选"]},{"id":"xz-123","question":"锅炉本体由汽锅和(）两部分组成。","options":["A. 省煤器","B. 空气预热器","C. 炉子","D. 过热器"],"answer":"C","analysis":"","tags":["单选"]},{"id":"xz-124","question":"火力发电厂主要采用自然循环、强迫循环锅炉、()、复合循环锅炉。","options":["A. 层燃锅炉","B. 固态排渣锅炉","C. 液态排渣锅炉","D. 直流锅炉"],"answer":"D","analysis":"","tags":["单选"]},{"id":"xz-125","question":"煤粉过细可使（ ）","options":["A. 磨煤机电耗增加","B. 磨煤机电耗减少","C. 机械不完全燃烧损失增加","D. 排烟温度升高"],"answer":"A","analysis":"","tags":["单选"]},{"id":"xz-126","question":"流体在管道内的流动阻力分为()两种。","options":["A. 流量孔板阻力、水力阳力：","B. 沿程阻力、局部阳力","C. 摩擦阻力、弯头阻力","D. 阀门阻力、三通阻力"],"answer":"B","analysis":"","tags":["单选"]},{"id":"xz-127","question":"、10个工程大气压等于()MPa。","options":["A. 9.8","B. 0.98","C. 0.098","D. 98"],"answer":"B","analysis":"","tags":["单选"]},{"id":"xz-128","question":"影响煤粉着火的主要因素是()。A、挥发分；","options":["A. 含碳量","B. 灰分","C. 氧"],"answer":"A","analysis":"","tags":["单选"]},{"id":"xz-129","question":"直吹式制粉系统中，磨煤机的制粉量随(）变化而变化。","options":["A. 锅炉负荷","B. 汽轮机负荷","C. 压力","D. 锅炉流量"],"answer":"A","analysis":"","tags":["单选"]},{"id":"xz-130","question":"、停炉时间超过()天，需要将原煤仓烧空防止托煤。","options":["A. 7天","B. 15天","C. 40天"],"answer":"A","analysis":"","tags":["单选"]},{"id":"xz-131","question":"完全燃烧必须具备的条件之一是（ ）","options":["A. 水分少","B. 挥发分高","C. 足够的燃烧时间."],"answer":"C","analysis":"","tags":["单选"]},{"id":"xz-132","question":"锅炉所有水位计损坏时应（ ）","options":["A. 紧急停炉","B. 申请停炉","C. 通知检修"],"answer":"A","analysis":"","tags":["单选"]},{"id":"xz-133","question":"在动力燃烧过程中，要强化燃烧，必须设法（ ）","options":["A. 供应合适的空气量","B. 改善煤粉与空气的混合情况","C. 提高炉膛温度"],"answer":"C","analysis":"","tags":["单选"]},{"id":"xz-134","question":"燃烧反应程度与温度是成正比的，但温度过高时，可能带来燃烧程度的（ ）","options":["A. 上升","B. 下降","C. 加快"],"answer":"B","analysis":"","tags":["单选"]},{"id":"xz-135","question":"汽包水位计水连通管堵塞时，则水位指示（ ）","options":["A. 偏低","B. 不变","C. 偏高"],"answer":"C","analysis":"","tags":["单选"]},{"id":"xz-136","question":"捞渣机应在锅炉点火前()min投运。","options":["A. 60","B. 90","C. 30","D. 70"],"answer":"C","analysis":"","tags":["单选"]},{"id":"xz-137","question":"炉负压摆动大，瞬时负压到最大，一二次风压不正常的降低，水位瞬时下降，汽压汽温下降，说明此时发生（ ）","options":["A. 烟道再燃烧","B. 吸送风机挡板摆动","C. 锅炉灭火"],"answer":"C","analysis":"","tags":["单选"]},{"id":"dx-001","question":"为什么真空降到一定数值时要紧急停机()。","options":["A. 真空降低使轴向位移过大，造成推力轴承受力过大而磨损","B. 真空降低使叶片因蒸汽流量增大而造成过负","C. 真空降低使排汽缸温度升高，汽缸中心线变化易引起机组振动增大","D. 真空降低使排汽压力升高，机组经济性提高"],"answer":"BC","analysis":"","tags":["多选"]},{"id":"dx-002","question":"汽轮机盘车运行中的注意事项有()。","options":["A. 先启动盘车运行正常后，再启动润滑油系统","B. 盘车运行时，应检查盘车电流及转子偏心正常","C. 盘车运行时，顶轴油压正常","D. 汽缸温度高于180℃，因检修需要停盘车时，应按规定时间盘动转子360°","E. 应经常检查各轴瓦油流正常，系统无泄漏"],"answer":"BCE","analysis":"","tags":["多选"]},{"id":"dx-003","question":"汽轮机缸预暖条件应满足():","options":["A. 盘车投入且连续运行4小时以上","B. 高压内缸调节级处内壁金属温度150℃以下","C. 汽封投入正常","D. 凝汽器真空达40Kpa以上","E. 高排逆止门关闭并置禁操位","F. 高中压调节阀关闭"],"answer":"ABCDEF","analysis":"","tags":["多选"]},{"id":"dx-004","question":"汽轮机禁止启动项有():","options":["A. 三抽逆止门故障，关不到位","B. 汽轮机转子晃度超过原始值0.02mm及以上","C. #5瓦轴振测点坏(粉色)","D. 任一安全保护装置失灵","E. 循环水泵变频器重故障"],"answer":"ABCD","analysis":"","tags":["多选"]},{"id":"dx-005","question":"变压器的过励磁避免方法()。","options":["A. 防止电压过高运行，一般电压越高，过励情况越严重，允许运行时间越短","B. 加温度控制器","C. 加装过励磁保护","D. 安装继电保护器"],"answer":"AC","analysis":"","tags":["多选"]},{"id":"dx-006","question":"职业健康检查包括（）","options":["A. 上岗前","B. 在岗期间","C. 离岗时","D. 应及时"],"answer":"ABCD","analysis":"","tags":["多选"]},{"id":"dx-007","question":"劳动者离开用人单位时（)本人的健康档案。","options":["A. 有权索取","B. 无权索取","C. 有权要求复印","D. 无权要求复印"],"answer":"AC","analysis":"","tags":["多选"]},{"id":"dx-008","question":"汽轮机主蒸汽温度不变，主蒸汽压力过高有哪些危害()。","options":["A. 机组末几级蒸汽的压力增大，末级动叶片过负荷","B. 使调节级压力增加，造成调节级动叶片过负荷","C. 使主蒸汽承压部件的应力增加，将会缩短部件的使用寿命，并可造成这些部件的变形以致损坏","D. 使机组末几级蒸汽的湿度增大，末级动叶片的工作条件恶化，水冲刷加重","E. 使调节级焓降增加，造成调节级动叶片过负荷"],"answer":"CDE","analysis":"","tags":["多选"]},{"id":"dx-009","question":"影响燃烧稳定性和经济性的重要因素有()。","options":["A. 挥发分","B. 水分","C. 灰分","D. 煤粉干度"],"answer":"ABC","analysis":"","tags":["多选"]},{"id":"dx-010","question":"当火焰中心位置降低时，炉内()。","options":["A. 幅射吸热量减少","B. 幅射吸热量增加","C. 过热汽温降低","D. 过热汽温升高"],"answer":"BC","analysis":"","tags":["多选"]},{"id":"dx-011","question":"汽包是()过程的连接枢纽。","options":["A. 预热","B. 加热","C. 蒸发","D. 过热"],"answer":"BCD","analysis":"","tags":["多选"]},{"id":"dx-012","question":"从业人员有权()，生产经营单位不得降低其工资、福利等待遇或者解除与其订立的劳动合同。","options":["A. 对本单位安全生产工作中存在的问题提出批评、检举、控告或者拒绝违章指挥、强令冒险作业","B. 对本单位的安全生产工作提出建议","C. 在紧急情况下停止作业或者采取紧急撤离措施","D. 没有及时听从指挥号令","E. 无故撤离作业现场"],"answer":"AB","analysis":"","tags":["多选"]},{"id":"pd-001","question":"水冷壁损坏现象有：炉膛发生强烈响声，燃烧不稳，炉膛风压变正，汽压下降，汽包水位低，给水流量不正常地大于蒸汽流量，烟温降低等。（）","options":[],"answer":"对","analysis":"","tags":["判断"]},{"id":"pd-002","question":"锅炉的定排工作是指：将水冷壁下联箱及集中下降管底部的排污门依次打开，使积聚在锅炉底部的水渣和沉淀物排出，以提高炉水品质。（）","options":[],"answer":"错","analysis":"","tags":["判断"]},{"id":"pd-003","question":"锅炉烟道漏风，不影响排烟热损失。","options":[],"answer":"错","analysis":"","tags":["判断"]},{"id":"pd-004","question":"停炉熄火后保持额定通风量25%以上的风量对锅炉通风5min以后，停止送风机和引风机。（）","options":[],"answer":"对","analysis":"","tags":["判断"]},{"id":"pd-005","question":"煤粉炉燃用的煤粉细度越细，煤粉的燃尽度越差，燃烧经济性越差。（）","options":[],"answer":"错","analysis":"","tags":["判断"]},{"id":"pd-006","question":"锅炉负荷增加时，一般调整的顺序是：先调整送风量，再调整引风量，最后调整燃料量。（）","options":[],"answer":"错","analysis":"","tags":["判断"]},{"id":"pd-007","question":"燃料中对锅炉工况影响较大的成分有：发热量、水分、灰分、挥发分。（）","options":[],"answer":"对","analysis":"","tags":["判断"]},{"id":"pd-008","question":"锅炉汽压调节的实质是调节锅炉的燃烧率。（）","options":[],"answer":"对","analysis":"","tags":["判断"]},{"id":"pd-009","question":"对流过热器的出口蒸汽温度是随着锅炉增加而降低。（）","options":[],"answer":"错","analysis":"","tags":["判断"]},{"id":"pd-010","question":"水冷壁是吸收炉膛的高温火焰的辐射热使水变成饱和蒸汽。（）","options":[],"answer":"对","analysis":"","tags":["判断"]},{"id":"pd-011","question":"锅炉吹灰会引起汽温波动及负荷波动。","options":[],"answer":"对","analysis":"","tags":["判断"]},{"id":"pd-012","question":"省煤器损坏的主要现象是省煤器烟道内有泄漏声，排烟温度降低，两侧烟温、风温偏差大，给水流量不正常地大于蒸汽流量，炉膛负压减小。（）","options":[],"answer":"对","analysis":"","tags":["判断"]},{"id":"pd-013","question":"锅炉烟道漏风，不影响排烟热损失。(\n196/466","options":[],"answer":"错","analysis":"","tags":["判断"]},{"id":"pd-014","question":"锅炉调节的特点是锅炉热惯性大、反应快。（）","options":[],"answer":"错","analysis":"","tags":["判断"]},{"id":"pd-015","question":"停炉熄火后保持额定通风量25%以上的风量对锅炉通风5min以后，停止送风机和引风机。(C","options":[],"answer":"对","analysis":"","tags":["判断"]},{"id":"pd-016","question":"给水流量不正常地大于蒸汽流量时，汽包水位上升。（）","options":[],"answer":"错","analysis":"","tags":["判断"]},{"id":"pd-017","question":"环保标记中“启动”标记包含锅炉正常点火启动、检修或改造后调试试验点火启动等情况。（）","options":[],"answer":"对","analysis":"","tags":["判断"]},{"id":"pd-018","question":"环保标记为“解列”的，每次时长不应超过2小时。（）","options":[],"answer":"对","analysis":"","tags":["判断"]},{"id":"pd-019","question":"环保标记为“并网/供能”的，每次时长不应超过4小时。（）","options":[],"answer":"对","analysis":"","tags":["判断"]},{"id":"pd-020","question":"一般情况下，环保标记为“启动”的，每次时长不应超过24小时。因其他客观因素导致确需延长的除外。（）","options":[],"answer":"对","analysis":"","tags":["判断"]},{"id":"pd-021","question":"机组在解列过程中，达到解列允许条件时解列按钮变绿，需按停炉操作票点击解列按钮，操作画面中解列按钮变红即为标记成功。（）","options":[],"answer":"对","analysis":"","tags":["判断"]},{"id":"pd-022","question":"换热分为三种基本形式，即传导、对流和热辐射。","options":[],"answer":"对","analysis":"","tags":["判断"]},{"id":"pd-023","question":"211.汽轮机骤升负荷,造成汽压突然降低,汽包水位也随之突然降低。","options":[],"answer":"错","analysis":"","tags":["判断"]},{"id":"pd-024","question":"发生转子一点接地后应投入转子两点接地保护。","options":[],"answer":"对","analysis":"","tags":["判断"]},{"id":"pd-025","question":"生产场所、作业点的应急通道和出入口,应设置有明显醒目的安全标志牌。","options":[],"answer":"对","analysis":"","tags":["判断"]},{"id":"pd-026","question":"班组安全活动日由班长组织,班组安员协助,车间领导参加并检查活动情况。","options":[],"answer":"对","analysis":"","tags":["判断"]},{"id":"pd-027","question":"冷态启动汽轮几升速至2000 rpm后,监视中压排气口处下半内壁温应大于130℃,并保持暖机60分钟。","options":[],"answer":"对","analysis":"","tags":["判断"]},{"id":"pd-028","question":"机组停运过程中,停变频循环水泵前应先退出“循环泵变频真空投切”保护,以免破坏真空后联启备用循环水泵。","options":[],"answer":"对","analysis":"","tags":["判断"]},{"id":"pd-029","question":"汽轮机3000rpm后可立即做超速试验。","options":[],"answer":"错","analysis":"","tags":["判断"]},{"id":"pd-030","question":"汽轮机发生水冲击或主、再热蒸汽温度10分钟内急剧下降50C应故障停机。","options":[],"answer":"错","analysis":"","tags":["判断"]},{"id":"pd-031","question":"EH油压降至11.2MPa时备用油泵应自投,油压降至7.8MPa时应保护动作停机。","options":[],"answer":"对","analysis":"","tags":["判断"]},{"id":"pd-032","question":"汽轮机润滑油温过高,可能造成油膜破坏,严重时可能造成烧瓦事故,所以一定要保持润滑油温在规定范围内。","options":[],"answer":"对","analysis":"","tags":["判断"]},{"id":"pd-033","question":"退出发电机热工保护,将负荷管理中心汽机主控切“手动”,在定压状态手动降负荷至0,汽机打闸,发电机程控逆功率保护动作解列。","options":[],"answer":"对","analysis":"","tags":["判断"]},{"id":"pd-034","question":"机组启动时,在一阶临界转速以下,汽轮机轴承盖振动超过0.03mm,在一阶临界转速以上,汽轮机轴承盖振动超过0.05mm,必须打闸停机。","options":[],"answer":"对","analysis":"","tags":["判断"]},{"id":"pd-035","question":"汽轮机轴向位移保护必须在冲转前投入。","options":[],"answer":"对","analysis":"","tags":["判断"]},{"id":"pd-036","question":"汽轮机启动过程中,在一阶临界转速以下,汽轮机振动不应超过0.05mm。","options":[],"answer":"错","analysis":"","tags":["判断"]},{"id":"pd-037","question":"机组启动过程中应严格控制主汽温升率1.5C/min,再热汽温升率》2C/min,并时刻保持50C以上的过热度。如10分钟内下降达50C及以上,应立即停机。","options":[],"answer":"对","analysis":"","tags":["判断"]},{"id":"pd-038","question":"冲车后应密切注意盘车脱开情况,若未脱开立即停机。","options":[],"answer":"对","analysis":"","tags":["判断"]},{"id":"pd-039","question":"温、热态启动,并网后以5MW/min的升负荷率平稳地升负荷,直到高压内缸上半内擘温度开始回升,暖机30分钟。","options":[],"answer":"对","analysis":"","tags":["判断"]},{"id":"pd-040","question":"汽轮机在运行中,主机润滑油温应保持在35~45℃的范围内。","options":[],"answer":"错","analysis":"","tags":["判断"]},{"id":"pd-041","question":"危急保安器超速试验,应在同一情况下进行两次,两次动作转速差不超过18转。","options":[],"answer":"对","analysis":"","tags":["判断"]},{"id":"pd-042","question":"机组发生强烈振动,轴振达250um、瓦盖振动达8Oum或听到机内清晰的金属磨擦声、撞击声,应紧急停机。","options":[],"answer":"对","analysis":"","tags":["判断"]},{"id":"pd-043","question":"汽轮机机械超速试验应带20%额定负荷连续运行3~4小时并且高压内缸上半为壁温度在350C以上,将发电机解列后进行。","options":[],"answer":"对","analysis":"","tags":["判断"]},{"id":"pd-044","question":"滑参数停机过程中注意主蒸汽参数及负荷变化情况,根据需要可稳定负荷及改变降负荷率。保持蒸汽过热度56C、降温速度1C/min、过热汽与再热汽温差42C。","options":[],"answer":"对","analysis":"","tags":["判断"]},{"id":"pd-045","question":"机组运行中要求轴承振动不超过0.03mm,轴振不超过0.09mm,超过时应设法消除。当轴承振动摆动值超过0.012mm或轴振摆动值超过0.03.应查明原因设法消除。","options":[],"answer":"对","analysis":"","tags":["判断"]},{"id":"pd-046","question":"检查DEH画面发现2号中调门(IV2)开度10%,其它各门正常,可以进行冲车操作。","options":[],"answer":"错","analysis":"","tags":["判断"]},{"id":"pd-047","question":"发电机并网后联系热控投入汽轮机轴向位移保护。","options":[],"answer":"错","analysis":"","tags":["判断"]},{"id":"pd-048","question":"停机后应注意监视凝汽器、高低压加热得、除氧器水位和主蒸汽、再热冷端及再热热段管道及各抽汽管道壁温变化,防止汽轮机进水。","options":[],"answer":"对","analysis":"","tags":["判断"]},{"id":"pd-049","question":"停机后,疑汽器真空到零,方可停止汽封供汽。汽封供汽停止后,应关闭低压汽封减温水手动门、旁路门、电动门及调整门。","options":[],"answer":"对","analysis":"","tags":["判断"]},{"id":"pd-050","question":"汽轮机停止后盘车未能及时投入或在盘车连续运行中停止时,应查明原因,修复后立即投入盘车并连续运行。","options":[],"answer":"错","analysis":"","tags":["判断"]},{"id":"pd-051","question":"汽轮机的动叶片结垢将引起轴向位移正值增大。","options":[],"answer":"对","analysis":"","tags":["判断"]},{"id":"pd-052","question":"汽轮机进冷水只发生在机组运行中,只要停机后就不会发生。","options":[],"answer":"错","analysis":"","tags":["判断"]},{"id":"pd-053","question":"汽轮机打闸后,只要主汽门,调速汽门能关闭,就不会发生超速事故。","options":[],"answer":"错","analysis":"","tags":["判断"]},{"id":"pd-054","question":"“两票”是指操作票和动火工作票。","options":[],"answer":"错","analysis":"","tags":["判断"]},{"id":"pd-055","question":"卸油区及油罐区不必有避雷装置和接地装置。","options":[],"answer":"错","analysis":"","tags":["判断"]},{"id":"pd-056","question":"再热蒸汽的特点是;密度较小、放热系数较低、比热较小。","options":[],"answer":"对","analysis":"","tags":["判断"]},{"id":"pd-057","question":"汽水混合物进入汽包内旋风分离器的流速越高,汽水分离的效果越好。","options":[],"answer":"对","analysis":"","tags":["判断"]},{"id":"pd-058","question":"断路器是利用交流电流自然过零时烺灭电弧的。","options":[],"answer":"对","analysis":"","tags":["判断"]},{"id":"pd-059","question":"6kV厂用电系统装有厂用电快切装置,当工作电源掉闸后,备用电源应快速自动投入。","options":[],"answer":"对","analysis":"","tags":["判断"]},{"id":"pd-060","question":"6kV电动机的绝缘电阻,应用2500V等级的兆欢表来测量,其绝缘电阻值不低于6MΩ。","options":[],"answer":"对","analysis":"","tags":["判断"]},{"id":"pd-061","question":"高厂变冷却器投自动运行时,通过变压器的上层油温、高压绕组温度和负荷电流来自动控制冷却器的运行。","options":[],"answer":"对","analysis":"","tags":["判断"]},{"id":"pd-062","question":"6kV及以下的电力电缆长期运行导体温度不能超65℃。","options":[],"answer":"对","analysis":"","tags":["判断"]},{"id":"pd-063","question":"变压器因瓦斯、差动保护动作跳闸时,紧急情况下,可以对变压器强送电一次。","options":[],"answer":"错","analysis":"","tags":["判断"]},{"id":"pd-064","question":"断路器是利用交流电流自然过零时熄灭电弧的。","options":[],"answer":"对","analysis":"","tags":["判断"]},{"id":"pd-065","question":"6kV电动机的绝缘电阻,应用2500V等级的兆欧表来测量,其绝缘电阻值不低于6 MΩ。","options":[],"answer":"对","analysis":"","tags":["判断"]},{"id":"pd-066","question":"交流电路中,电感元件两端的电压相位超前电流相位90。","options":[],"answer":"对","analysis":"","tags":["判断"]},{"id":"pd-067","question":"交流电路中,电容元件两端的电流相位超前电压相位90。","options":[],"answer":"对","analysis":"","tags":["判断"]},{"id":"pd-068","question":"异步电动机的启动电流一般为电动机额定电流的4~7倍。","options":[],"answer":"对","analysis":"","tags":["判断"]},{"id":"pd-069","question":"炉膛吹灰器吹灰顺序应按照烟气介质的流动方向进行。","options":[],"answer":"对","analysis":"","tags":["判断"]},{"id":"pd-070","question":"燃烧设备的惯性越大,在变工况或受到内、外扰动时,锅炉汽压恢复的速度就越快。","options":[],"answer":"错","analysis":"","tags":["判断"]},{"id":"pd-071","question":"循环倍率锅炉的给水流量变化时,不会影响到蒸发量和汽温等。","options":[],"answer":"错","analysis":"","tags":["判断"]},{"id":"pd-072","question":"锅炉的定排工作是指:将水冷壁下联箱及集中下降管底部的排污门依次打开,使积聚在锅炉底部的水渣和沉淀物排出,以提高炉水品质。","options":[],"answer":"对","analysis":"","tags":["判断"]},{"id":"pd-073","question":"当汽包上半部壁温低于下半部壁温时,上半部金属受轴向压应力。","options":[],"answer":"错","analysis":"","tags":["判断"]},{"id":"pd-074","question":"锅炉停炉前应全面吹灰一次。","options":[],"answer":"对","analysis":"","tags":["判断"]},{"id":"pd-075","question":"锅炉进行超压试验时,应遵照《电力工业锅炉监察规程》DL612—1996规定进行。","options":[],"answer":"对","analysis":"","tags":["判断"]},{"id":"pd-076","question":"不同压力下的排污管、疏水管和放水管不应放入同一母管中。","options":[],"answer":"对","analysis":"","tags":["判断"]},{"id":"pd-077","question":"锅炉安全门的总排汽能力应等于最大连续蒸发量。","options":[],"answer":"错","analysis":"","tags":["判断"]},{"id":"pd-078","question":"给水温度升高,在同样的炉内负荷下,锅炉的蒸发量就会提高,在其它工况不变时,过热汽温会上升。","options":[],"answer":"错","analysis":"","tags":["判断"]},{"id":"pd-079","question":"当过剩空气系数不变时,锅炉负荷增加时,锅炉效率也增加。","options":[],"answer":"错","analysis":"","tags":["判断"]},{"id":"pd-080","question":"当锅炉严重满水时,汽温有所下降,给水管道发生水冲击。","options":[],"answer":"错","analysis":"","tags":["判断"]},{"id":"pd-081","question":"炉前燃油系统中,吹扫到最后一部分残油允许吹到炉膛内。","options":[],"answer":"错","analysis":"","tags":["判断"]},{"id":"pd-082","question":"在烟气中含有大量易燃气体时,电气除尘器绝不能投入运行。","options":[],"answer":"对","analysis":"","tags":["判断"]},{"id":"pd-083","question":"灰的导热系数较大,在对流过热器上发生积灰,将大大影响受热面的传热。","options":[],"answer":"错","analysis":"","tags":["判断"]},{"id":"tk-001","question":"空预器掉闸后（ ）后才能再次启动。","options":[],"answer":"变频器就地需复位","analysis":"","tags":["填空"]},{"id":"tk-002","question":"锅炉水容积:正常运行时（ ）M3，水压试验时（ ）M3，再热器水容积（ ）M3。","options":[],"answer":"191，522.8，150","analysis":"","tags":["填空"]},{"id":"tk-003","question":"当磨煤机出口温度高于（ ） C时自动开启其（ ），高于（ ）℃磨煤机保护跳闸。","options":[],"answer":"90，入口冷风门，110","analysis":"","tags":["填空"]},{"id":"tk-004","question":"启动过程中，合理调整燃烧，加强烟气温度监视，控制主汽左右温差（ ），主汽与再热汽温差（ ），烟气左右温差（ ）","options":[],"answer":"≯17℃，≯43℃，≯30℃","analysis":"","tags":["填空"]},{"id":"tk-005","question":"空预器冷端综合温度不得低于148℃，是为了防止（ ）","options":[],"answer":"尾部预热器低温腐蚀","analysis":"","tags":["填空"]},{"id":"tk-006","question":"蒸汽管道等通过热介质的系统，投运前应先充分（ ），排除积水，防止管道水击引起强烈振动","options":[],"answer":"暖管","analysis":"","tags":["填空"]},{"id":"tk-007","question":"热力系统中一、二次串联布置的疏水门、空气门，一次门用于（ ），二次门用于（ ），除非特殊情况，不得将一次门做为调整用，防止一次门门芯吹损后，不能起到隔断系统作用","options":[],"answer":"系统隔绝、调整或频繁操作","analysis":"","tags":["填空"]},{"id":"tk-008","question":"电动门电动关闭后，如发现漏流较大时，应及时（ ），严禁运行人员手动摇关，防止阀门损坏","options":[],"answer":"联系检修并登录缺陷","analysis":"","tags":["填空"]},{"id":"tk-009","question":"引风机额定电流（ ），送风机额定电流（ ），一次风机额定电流（ ）.","options":[],"answer":"458 ，117.4 ，142","analysis":"","tags":["填空"]},{"id":"tk-010","question":"送风机轴承型式为（ ），一次风机轴承型式为（ ）","options":[],"answer":"滚动轴承，调心滚子轴承","analysis":"","tags":["填空"]},{"id":"tk-011","question":"引风机出口总压为（ ）Pa","options":[],"answer":"3884","analysis":"","tags":["填空"]},{"id":"tk-012","question":"MPS磨煤机额定电流为（ ）A, ZGM磨煤机额定电流为（ ）A。","options":[],"answer":"49.4，63.8","analysis":"","tags":["填空"]},{"id":"tk-013","question":"引风机油站运行正常中，控制油压在（ ）MPa左右，电机润滑油量在（ ） L/min左右，风机润滑油量在（ ）L/min左右","options":[],"answer":"9，16，16.5","analysis":"","tags":["填空"]},{"id":"tk-014","question":"引风机主轴承温度报警值>（ ）℃，保护跳闸值>（ ）℃（三取二)","options":[],"answer":"85，100","analysis":"","tags":["填空"]},{"id":"tk-015","question":"送风机轴承温度维持在小于等于（ ）“℃，润滑油箱油温在（ ）~（ ）C，油质合格无（ ）象","options":[],"answer":"70， 30 ，50，乳化","analysis":"","tags":["填空"]},{"id":"tk-016","question":"送风机润滑油压不低于（ ）Mpa，液压油压力大于（ ）Mpa，系统无漏油现象","options":[],"answer":"0.15，1.5","analysis":"","tags":["填空"]},{"id":"tk-017","question":"一次风机机械轴承油位在（ ）之间，各轴瓦振动不超过（ ）mm，一次风机内部无明显异常声音","options":[],"answer":"正常油位线和高油位线，0.08","analysis":"","tags":["填空"]},{"id":"tk-018","question":"一次风机轴承温度正常运行应小于（ ）℃.电机外壳温度不大于100℃，温升不大于（ ）C。","options":[],"answer":"70 ，65","analysis":"","tags":["填空"]},{"id":"tk-019","question":"除氧器运行中应监视的项目主要有（ ）、（ ）（ ）、（ ）等。","options":[],"answer":"压力、温度、水位、溶氧","analysis":"","tags":["填空"]},{"id":"tk-020","question":"通过临界转速时，要迅速平稳，轴振大于（ ）mm,保护动作停机，轴承盖振动大于0.1mm时，应立即打闸停机。","options":[],"answer":"0.25","analysis":"","tags":["填空"]},{"id":"tk-021","question":"我公司锅炉磨煤机有两种型号（ ）和（ ）。","options":[],"answer":"MPS170HP-II磨煤机 ZGM95G-ll磨煤机","analysis":"","tags":["填空"]},{"id":"tk-022","question":"空气预热器、引风机、送风机、一次风机检修后的连续运行时间（ ），磨煤机空转试运时间（ ），其它转机的试运时间（ ）。","options":[],"answer":"不得少于4小时，不得少于10分钟，不得少于30分钟","analysis":"","tags":["填空"]},{"id":"tk-023","question":"发电机内氢气纯度要求（ ），运行氢压下氢气湿度控制标准为（ ）。","options":[],"answer":"≥96.0%；-5℃到-25℃","analysis":"","tags":["填空"]},{"id":"tk-024","question":"“班组”栏：一个班组检修，班组栏填写（ ）全称。","options":[],"answer":"工作班组","analysis":"","tags":["填空"]},{"id":"tk-025","question":"任何电气设备上的标示牌，除（ ）人员或负责的（ ）人员外，其他任何人员不准移动。","options":[],"answer":"原来放置；运行值班","analysis":"","tags":["填空"]},{"id":"tk-026","question":"企业必须对所有新员工进行三级安全教育培训，告知作业现场和工作岗位存在的（","options":[],"answer":"职业病危害因素","analysis":"","tags":["填空"]},{"id":"tk-027","question":"设备异常运行可能危及人身安全时，应停止设备运行，在停止运行前除必要的（ ）人员外，其他人员不准接近该设备或在该设备附近逗留","options":[],"answer":"运行、维护","analysis":"","tags":["填空"]},{"id":"tk-028","question":"依据《防止电力生产事故的二十五项重点要求》(2023版)8.3.7汽轮机启动前必须符合以下条件，否则禁止启动：高压外缸上、下缸温差不超过（ ）C,高压内缸上、下缸温差不超过（ ）℃。若制造厂有更严格的规定，应从严执行。","options":[],"answer":"50、35","analysis":"","tags":["填空"]},{"id":"tk-029","question":"汽轮机低压缸喷水装置的作用是（ ）。","options":[],"answer":"降低排汽缸温度","analysis":"","tags":["填空"]},{"id":"tk-030","question":"给水泵前置泵的作用是提高给水泵（ ），防止给水泵发生（ ）。","options":[],"answer":"入口压力、汽蚀","analysis":"","tags":["填空"]},{"id":"tk-031","question":"内冷水出口母管压力低至（ ）Mpa,联锁启动备用泵。","options":[],"answer":"0.5","analysis":"","tags":["填空"]},{"id":"tk-032","question":"除氧器水位高（ ）mm联锁开启除氧器溢流电动门，除氧器水位低（ ） mm联锁关闭除氧器溢流电动门。","options":[],"answer":"2380、2350","analysis":"","tags":["填空"]},{"id":"tk-033","question":"正常运行中密封油与发电机内氢压的差压是由（ ）自动控制，自动控制范围是（ ）0.02 Mpa。","options":[],"answer":"密封油差压阀、0.056","analysis":"","tags":["填空"]},{"id":"tk-034","question":"当真空降低到-（ ）KPa时报警,联启备用真空泵。真空低至（ ）KPa机组跳闸发”凝汽器真空过低停机”。","options":[],"answer":"81、75","analysis":"","tags":["填空"]},{"id":"tk-035","question":"在停机过程中，转速降至（ ）r/min时，停真空泵，转速（ ） r/min时，开启真空破坏门。","options":[],"answer":"600、300","analysis":"","tags":["填空"]},{"id":"tk-036","question":"循环水泵电机额定电流（ ）A。","options":[],"answer":"222","analysis":"","tags":["填空"]},{"id":"tk-037","question":"前置泵电机额定电流（ ）A。","options":[],"answer":"347.7","analysis":"","tags":["填空"]},{"id":"tk-038","question":"内冷水泵电机额定电流（ ）A。","options":[],"answer":"42.2","analysis":"","tags":["填空"]},{"id":"tk-039","question":"EH油泵额定电流（ ）A。","options":[],"answer":"84.7","analysis":"","tags":["填空"]},{"id":"tk-040","question":"#1机通流改造后汽轮机的调节级压力的限制值是（ ）Mpa。","options":[],"answer":"15.084","analysis":"","tags":["填空"]},{"id":"tk-041","question":"高压加热器疏水采用（ ）疏水方式，即从较高压力的加热器排到较低压力的加热器，直至排到除氧器。","options":[],"answer":"逐级串联","analysis":"","tags":["填空"]},{"id":"tk-042","question":"开冷水系统向闭冷水热交换器、（ ）、水环式真空泵、汽动给水泵油冷却器、电动给水泵工作油和润滑油冷油器等冷却换热设备供水。","options":[],"answer":"主机冷油器","analysis":"","tags":["填空"]},{"id":"tk-043","question":"高加连续排气经节流孔板接入（ ），低加连续排气经节流孔板接入凝汽器。","options":[],"answer":"除氧器","analysis":"","tags":["填空"]},{"id":"tk-044","question":"再热冷段蒸汽系统用来输送从汽轮机高压缸排汽到锅炉再热器的再热蒸汽，并为轴封系统、、高压辅助蒸汽系统提供汽源。\n（ ）","options":[],"answer":"2号高压加热器","analysis":"","tags":["填空"]},{"id":"tk-045","question":"给水系统的作用是将经（ ）的给水升压送至锅炉省煤器，给水系统分别向过热器减温器、再热器减温器和高压旁路减温减压装置提供减温水。每台机组设置2台 50%B-MCR容量的汽动给水泵及1台（ ）%B-MCR容量的电动调速给水泵。","options":[],"answer":"除氧合格、30 <w:tab/>","analysis":"","tags":["填空"]},{"id":"tk-046","question":"汽轮机事故停机一般分为紧急停机、立即停机、故障停机三种方式，其中（ ）应破坏真空。","options":[],"answer":"紧急停机","analysis":"","tags":["填空"]},{"id":"tk-047","question":"机组温、热态启动时，主机润滑油温在40~43℃，最低不得低于（ ）℃。","options":[],"answer":"38","analysis":"","tags":["填空"]},{"id":"tk-048","question":"热态启动冲转前，应连续盘车（ ）小时以上。","options":[],"answer":"4","analysis":"","tags":["填空"]},{"id":"tk-049","question":"危急保安器超速试验，应在同一情况下进行两次，两次动作转数差不超过（ ）转。","options":[],"answer":"18","analysis":"","tags":["填空"]},{"id":"tk-050","question":"#1机临界转速区：（ ）~（ ）r/min。","options":[],"answer":"900、1850","analysis":"","tags":["填空"]},{"id":"tk-051","question":"#2机临界转速区：（ ）~（ ）r/min。","options":[],"answer":"1350、1850","analysis":"","tags":["填空"]},{"id":"tk-052","question":"#1机通流提效改造后汽轮机型号为CC330/-16.7/0.3/537/537，通流级数为（ ）级。","options":[],"answer":"248、32","analysis":"","tags":["填空"]},{"id":"tk-053","question":"填空题发电机励磁调节器取自发电机﹣2TV和﹣（ ）TV二次电压？","options":[],"answer":"3","analysis":"","tags":["填空"]},{"id":"tk-054","question":"发电机振荡，可能有两种结果：一是能稳定在新的工作点保持（ ）运行，二是可能造成发电机失步运行。","options":[],"answer":"同步","analysis":"","tags":["填空"]},{"id":"tk-055","question":"变压器油在变压器中起灭弧、绝缘、（ ）的作用。","options":[],"answer":"冷却","analysis":"","tags":["填空"]},{"id":"tk-056","question":"运行中的变压器（ ）与差动保护不得同时停用。","options":[],"answer":"瓦斯保护","analysis":"","tags":["填空"]},{"id":"tk-057","question":"新安装或变更线圈的变压器投运前应进行（ ）次全电压冲击试验？","options":[],"answer":"5","analysis":"","tags":["填空"]},{"id":"tk-058","question":"当由于主变上层油温高需限负荷时，应先限无功，再限（ ）。","options":[],"answer":"有功","analysis":"","tags":["填空"]},{"id":"tk-059","question":"隔离开关的作用有隔离电源、倒闸操作、\n（ ）","options":[],"answer":"接通和断开小电流的电路","analysis":"","tags":["填空"]},{"id":"tk-060","question":"发电机励磁调节器取自发电机﹣2TV和﹣（ ）TV 二次电压？","options":[],"answer":"3","analysis":"","tags":["填空"]},{"id":"tk-061","question":"新安装或变更线圈的变压器投运前应进行（ ）次全电压冲击试验？","options":[],"answer":"5 运行中的变压器（）与差动保护不得同时停用。标准答案瓦斯保护","analysis":"","tags":["填空"]},{"id":"tk-062","question":"隔离开关的作用有隔离电源、倒闸操作、","options":[],"answer":"接通和断开小电流的路","analysis":"","tags":["填空"]},{"id":"tk-063","question":"检修后的辅机试转前，必须进行各项（ ）试验。其控制回路、自动装置、热工联锁保护以及机械装置、气动装置，应按规定试验合格后方可进行试转。","options":[],"answer":"联锁、保护","analysis":"","tags":["填空"]},{"id":"tk-064","question":"辅机启动前，设备轴承已加好润滑油，（ ）、油温符合要求。设备的（ ）已投入正常，电动机及辅机各部分的温度符合要求。","options":[],"answer":"油质、油位 冷却水或密封水","analysis":"","tags":["填空"]},{"id":"tk-065","question":"蒸汽管道等通过热介质的系统，投运前应先（ ），排除积水，防止管道水击引起强烈振动。","options":[],"answer":"充分暖管","analysis":"","tags":["填空"]},{"id":"tk-066","question":"热力系统中一、二次串联布置的疏水门、空气门，一次门用于（ ），二次门用于（ ），除非特殊情况，不得将一次门做为调整用，防止一次门门芯吹损后，不能起到隔断系统的作用","options":[],"answer":"系统隔绝 调整或频繁操作","analysis":"","tags":["填空"]},{"id":"tk-067","question":"空预器是利用（ ）加热（ ）。","options":[],"answer":"烟气热量 一二次风","analysis":"","tags":["填空"]},{"id":"tk-068","question":"锅炉吸风机转速（ ）r/min，电流（ ）","options":[],"answer":"995 458","analysis":"","tags":["填空"]},{"id":"tk-069","question":"MPS170HP-II磨煤机当润滑油压低至（ ）M Pa时，联掉对应磨煤机。","options":[],"answer":"0.08","analysis":"","tags":["填空"]},{"id":"tk-070","question":"ZGM95G-III磨煤机当润滑油压低至（ ）MP a时，联掉对应磨煤机。","options":[],"answer":"0.1","analysis":"","tags":["填空"]},{"id":"tk-071","question":"锅炉大小修后应做水压试验，主汽系统工作压力试验定值（ ）MPa，超工作压力试验定值（ ）MPa。","options":[],"answer":"18.823.5","analysis":"","tags":["填空"]},{"id":"tk-072","question":"在点火过程中，应严格监视汽包壁差（ ）℃，否则应停止升压，采取措施消除后，待温差小于（ ）℃时，再继续升压，并做好记录。","options":[],"answer":"50 50","analysis":"","tags":["填空"]},{"id":"tk-073","question":"启动过程中，随负荷升高，投入一减时注意减温器后的蒸汽温度有（ ）以上的过热度，要避免减温器时开时停的现象。","options":[],"answer":"14℃","analysis":"","tags":["填空"]},{"id":"tk-074","question":"正常运行中，一减作为粗调，其喷水量应大些，（ ）；二减作为细调，其喷水量应小些，（ ）。","options":[],"answer":"保持屏过壁温不超过规定值 保持主蒸汽温度稳定","analysis":"","tags":["填空"]},{"id":"tk-075","question":"当选择后汽包水位≥高II值（ ）时，高II值报警，联开事故放水电动门。","options":[],"answer":"+150mm","analysis":"","tags":["填空"]},{"id":"tk-076","question":"当选择后汽包水位≥高III值（ ）时，高III值报警，锅炉MFT动作，同时触发大联锁，联跳汽轮机。","options":[],"answer":"＋280mm","analysis":"","tags":["填空"]},{"id":"tk-077","question":"当选择后汽包水位≤低II值（ ）时，低III值报警，锅炉MFT动作，同时触发大联锁，联跳汽轮机。","options":[],"answer":"-280mm","analysis":"","tags":["填空"]},{"id":"tk-078","question":"锅炉水容积：正常运行时（ ）M3，水压试验时（ ）M3。","options":[],"answer":"191 522.8","analysis":"","tags":["填空"]},{"id":"tk-079","question":"操作员站画面送风机动叶指示开度在0~10\n0%，就地执行器显示开度在（ ），动叶实际开度在\nC","options":[],"answer":"0~100%-36°~ +20°","analysis":"","tags":["填空"]},{"id":"tk-080","question":"送风机油站润滑油压（ ）Mpa，液压油压力大于（ ）Mpa，系统无漏油现象，油质合格无乳化现象。","options":[],"answer":"0.15-0.2 1.5-2.0","analysis":"","tags":["填空"]},{"id":"tk-081","question":"检查一次风机各轴瓦振动不超过（ ）mm,一次风机内部无明显异常声音。","options":[],"answer":"0.08","analysis":"","tags":["填空"]},{"id":"tk-082","question":"磨煤机液压油站油位（ ）报警，油位（ ）停磨煤机。","options":[],"answer":"<350mm<400mm","analysis":"","tags":["填空"]},{"id":"tk-083","question":"锅炉大小修后应做水压试验，主汽系统工作压力试验定值（ ）MPa，超工作压力试验定值（ ）MPa。","options":[],"answer":"18.8 23.5","analysis":"","tags":["填空"]},{"id":"tk-084","question":"操作员站画面引风机静叶指示开度在0~100%，就地执行器显示开度在（ ），静叶实际开度为（ ）。","options":[],"answer":"0~ 100%-75°~+30°","analysis":"","tags":["填空"]},{"id":"tk-085","question":"空预器入口烟温（ ）方允许停止空预器。","options":[],"answer":"小于125℃","analysis":"","tags":["填空"]},{"id":"tk-086","question":"空气预热器、引风机、送风机、一次风机检修后的连续运行时间（ ），磨煤机空转试运时间（ ），其它转机的试运时间（ ）。","options":[],"answer":"不得少于2小时 不得少于10分钟 不得少于30分钟","analysis":"","tags":["填空"]},{"id":"tk-087","question":"锅炉集中下降管采用（ ）根SA-106C的钢管。","options":[],"answer":"4","analysis":"","tags":["填空"]},{"id":"tk-088","question":"过热器按传热方式分为（ ）、（ ）、（ ）过热器。","options":[],"answer":"辐射式 半辐射式 对流式","analysis":"","tags":["填空"]},{"id":"tk-089","question":"锅炉汽包内径（ ）mm，壁厚（ ）mm，全部长度（ ）mm。","options":[],"answer":"1775 185 19724","analysis":"","tags":["填空"]},{"id":"tk-090","question":"单只油燃烧器出力为（ ）。","options":[],"answer":"800kg/h","analysis":"","tags":["填空"]},{"id":"tk-091","question":"给煤机最大连续出力（ ）。","options":[],"answer":"55t/h","analysis":"","tags":["填空"]},{"id":"tk-092","question":"锅炉水容积:正常运行时（ ）M3,水压试验时（ ）M3，再热器水容积（ ）M3.","options":[],"answer":"191 522.8 150 锅炉送风机转速()r/min，10、电流() A。标准答案 1489 117.4","analysis":"","tags":["填空"]},{"id":"tk-093","question":"锅炉B、C、E磨煤机型号（ ），出力（ ）t/h。","options":[],"answer":"MPS170HP-11 40.6","analysis":"","tags":["填空"]},{"id":"tk-094","question":"B、C、E磨煤机转速（ ）r/min，电流（ ）A。","options":[],"answer":"34.3 49.4","analysis":"","tags":["填空"]},{"id":"tk-095","question":"电动门的严密性以电动关严后（ ）\n为合格。","options":[],"answer":"手动将门杆摇严后再回摇1/4-1/5圈当磨煤机出口温度高于()°C时自14、动开启其()，高于()°C磨煤机保护跳闸标准答案 90 入口冷风门 110","analysis":"","tags":["填空"]},{"id":"tk-096","question":"过热蒸汽BMCR蒸发量（ ）t/h。","options":[],"answer":"1100","analysis":"","tags":["填空"]},{"id":"tk-097","question":"若设备启动中发生跳闸，在（ ），不得再次启动。","options":[],"answer":"未查明原因并消除故障前","analysis":"","tags":["填空"]},{"id":"tk-098","question":"对可以进行手动盘动的辅助设备,\n均应（ ），确认转动灵活，无卡涩现象。","options":[],"answer":"盘动转子","analysis":"","tags":["填空"]},{"id":"tk-099","question":"运行中F级绝缘电动机外壳温度不得高于（ ）°C。","options":[],"answer":"90","analysis":"","tags":["填空"]},{"id":"tk-100","question":"检修后的电动阀门必须进行（ ）。未验收的阀门在进行操作时必须联系维护到场并经检修许可后方可操作，注意防止阀门过开或过关，造成阀门损坏。","options":[],"answer":"验收","analysis":"","tags":["填空"]},{"id":"tk-101","question":"引风机油站运行中，控制油压在（ ）MPa左右，电机润滑油量在（ ）L/min左右，风机润滑油量在（ ）L/min左右。","options":[],"answer":"9 16 16.5","analysis":"","tags":["填空"]},{"id":"tk-102","question":"干渣机冷却风机额定电流（ ）A。","options":[],"answer":"359.2","analysis":"","tags":["填空"]},{"id":"tk-103","question":"干渣机冷却风机运行中电机和风机轴承温度不高于（ ）℃，电机线圈温度不高于（ ）°C。","options":[],"answer":"75 115","analysis":"","tags":["填空"]},{"id":"tk-104","question":"干渣机冷却风机联络管入口温度不高于（ ）'℃，冷却风机入口、出口风温不高于（ ）℃C。","options":[],"answer":"105 100","analysis":"","tags":["填空"]},{"id":"tk-105","question":"干渣机冷却风机正常运行中每（ ）小时就地设备巡检一次，检查（ ）动作正常。","options":[],"answer":"2 锁气器","analysis":"","tags":["填空"]},{"id":"tk-106","question":"干渣机冷却风机运行中每班（ ）活动除尘器下部的一、二道锁气器拐臂重锤。","options":[],"answer":"二次","analysis":"","tags":["填空"]},{"id":"jd-001","question":"环保工况标记点逻辑中，启动标记为自动标记。达到什么条件时自动标记为“启动”，操作画面中启动状态变红?","options":[],"answer":"以下条件同时满足(3秒脉冲后保持) 1、吹扫完成。 2、任一送风机、引风机同时运行。 3、燃油流量大于1t/h且任一层油火检有火(四取二）或煤量大于10t/h且任一层煤火检有火(四取二)","analysis":"","tags":["简答"]},{"id":"jd-002","question":"环保工况标记点逻辑中，并网/供能标记自动取消，画面中并网/供能状态变灰，并网/供能复位的条件是什么？","options":[],"answer":"以下条件任一满足复位： 1、净烟气氮氧化物浓度低于30mg/m³，脉冲3秒。 2、停炉标记。 3、停运标记。","analysis":"","tags":["简答"]},{"id":"jd-003","question":"机组在解列过程中，达到什么条件时解列按钮变绿允许操作？","options":[],"answer":"负荷低于130MW","analysis":"","tags":["简答"]},{"id":"jd-004","question":"停炉标记为自动标记。达到什么条件时自动标记为“停炉”，操作画面中停炉状态变红？","options":[],"answer":"以下条件同时满足（3秒脉冲后保持） 1、总煤量指令为0；或燃油流量小于0.5t/h。 2、炉膛无火（四取二取反）。 3、无并网信号。","analysis":"","tags":["简答"]},{"id":"jd-005","question":"停运标记为自动标记。达到什么条件时自动标记为“停运”，操作画面中停运状态变红？","options":[],"answer":"以下条件同时满足 1、氧量大于19%且流速小于2m/s且烟气流量小于240Nm3/h且烟气温度小于40℃。 2、炉膛无火（四取二取反）。","analysis":"","tags":["简答"]},{"id":"jd-006","question":"空预器就地复位、启动操作步骤？","options":[],"answer":"1.看清设备标识； 2.按下变频器操作面板上“RESET (复位)”键； 3.将变频器柜门上“远程/现场”切换开关切至“现场”位； 4.按下变频器柜门上“启动”键； 5.检查空预器是否启动","analysis":"","tags":["简答"]},{"id":"jd-007","question":"转动机械轴承温度高的原因有哪些？","options":[],"answer":"（1）. 油位高，油量过多；（2）. 油位低，缺油或无油；（3）. 冷却水不足或中断；（5）. 油环不带油或不转动；（6）. 轴承油缺陷或损坏。","analysis":"","tags":["简答"]},{"id":"jd-008","question":"燃油罐区#1油罐发生大火，怎样就地投入泡沫灭火系统？","options":[],"answer":"①汇报值长火情，报火警，启动电动消防泵； ②泡沫泵房就地打开泡沫混合器进、出口门，检查#1油罐泡沫及消防冷却水雨淋阀已启动，否则手动紧急启动； ③根据#1油罐火情外溢情况，就地开启#1油罐就近泡沫消防栓。","analysis":"","tags":["简答"]},{"id":"jd-009","question":"3、锅炉容量：","options":[],"answer":"即锅炉的蒸发量，是指锅炉每小时所产生的蒸汽量。","analysis":"","tags":["简答"]},{"id":"jd-010","question":"4、再热器：","options":[],"answer":"将汽轮机高压缸排汽加热成具有一定温度的再热蒸汽的热交换器。","analysis":"","tags":["简答"]},{"id":"jd-011","question":"5、压力：","options":[],"answer":"单位面积上所受到的垂直作用力。","analysis":"","tags":["简答"]},{"id":"jd-012","question":"6、辐射：","options":[],"answer":"物体通过电磁波来传递能量的方式。","analysis":"","tags":["简答"]},{"id":"jd-013","question":"7、流体：","options":[],"answer":"容易变形具有流动性的物质。","analysis":"","tags":["简答"]},{"id":"jd-014","question":"1、沸腾：","options":[],"answer":"液体表面和液体内部同时进行的剧烈的汽化现象。","analysis":"","tags":["简答"]},{"id":"jd-015","question":"2、省煤器：","options":[],"answer":"利用锅炉尾部烟气的热量加热锅炉给水的热交换器。","analysis":"","tags":["简答"]},{"id":"jd-016","question":"3、工质：","options":[],"answer":"实现热能和机械能相互转化的媒介物质。","analysis":"","tags":["简答"]},{"id":"jd-017","question":"4、导热：","options":[],"answer":"物体各部分之间不发生相对位移，依靠分子、原子及自由电子等微观粒子的热运动而产生的热量传递。","analysis":"","tags":["简答"]},{"id":"jd-018","question":"5、温度：","options":[],"answer":"标志物体冷热的程度。","analysis":"","tags":["简答"]},{"id":"jd-019","question":"6、不同转速的转机振动合格标准是什么？","options":[],"answer":"(1) 额定转速750r/min以下的转机，轴承振动值不超过0.12mm；(2) 额定转速1000r/min的转机，轴承振动值不超过0.10mm；(3) 额定转速1500r/min的转机，轴承振动值不超过0.085mm；(4) 额定转速3000r/min的转机，轴承振动值不超过0.05mm。","analysis":"","tags":["简答"]},{"id":"jd-020","question":"7、简述润滑油（脂）的作用。","options":[],"answer":"润滑油（脂）可以减少转动机械与轴瓦（轴承）动静之间摩擦，降低摩擦阻力，保护轴和轴承不发生擦伤及破裂，以达到延长轴和轴承的使用寿命。","analysis":"","tags":["简答"]},{"id":"jd-021","question":"8、水的汽化方式有哪几种？","options":[],"answer":"(1)蒸发：是在水的表面进行的较为缓慢的汽化过程。可以在任意温度下进行。(2)沸腾：是在液体表面和内部同时进行的较为强烈的汽化现象。只有在液体温度达到其对应压力下的饱和温度时才会发生。例如一个大气压力下，水温达到：1 0 0 ^{\\circ} C时开始沸腾。","analysis":"","tags":["简答"]},{"id":"jd-022","question":"干渣机冷却风机联锁停止条件？","options":[],"answer":"两台送风机停止运行","analysis":"","tags":["简答"]},{"id":"jd-023","question":"干渣机冷却风机运行中如果低负荷时排烟温度低于130℃时如何处理？","options":[],"answer":"首先采取投运暖风器提高排烟温度，其次停运干渣机冷却风机。当负荷增加时及时投运干渣机冷却风机。","analysis":"","tags":["简答"]},{"id":"jd-024","question":"发生下列情况之一时，紧急停运干渣机冷却风机：","options":[],"answer":"1、设备发生剧烈振动 2、清楚地听到设备内部右明显金属摩擦声 3、电机或电缆线冒烟着火 4、轴承冒烟着火或轴承温度超过95℃ 5、设备运行威胁人身或设备安全时 6、电机线圈温度超过120℃ 7、水冷壁或高温过热器爆管时","analysis":"","tags":["简答"]}];</script>
+<script>/* 题库搜题 · 手机离线版
+   题库通过 window.__BANK__ 注入，匹配逻辑与电脑端 server.mjs 保持一致 */
+'use strict';
+
+/* ------------------------------------------------------------------ *
+ * 匹配（与 server.mjs 的 search 同一套算法）
+ * ------------------------------------------------------------------ */
+
+const norm = (s) => {
+  if (!s) return '';
+  let t = String(s).normalize('NFKC').toLowerCase();
+  t = t.replace(/^\s*第?\s*\d{1,3}\s*[、.．)）:：]\s*/, '');
+  return t.replace(/[^\u4e00-\u9fa5\u3040-\u30ffa-z0-9]+/g, '');
+};
+
+const grams = (s, n) => {
+  const out = new Set();
+  if (!s) return out;
+  if (s.length < n) { out.add(s); return out; }
+  for (let i = 0; i + n <= s.length; i++) out.add(s.slice(i, i + n));
+  return out;
+};
+
+const dice = (a, b) => {
+  if (!a.size || !b.size) return 0;
+  const [small, big] = a.size <= b.size ? [a, b] : [b, a];
+  let hit = 0;
+  for (const g of small) if (big.has(g)) hit++;
+  return (2 * hit) / (a.size + b.size);
+};
+
+const BANK = Array.isArray(window.__BANK__) ? window.__BANK__ : [];
+
+const INDEX = BANK.map((item) => {
+  const qNorm = norm(item.question);
+  const optTexts = (item.options || [])
+    .map((o) => norm(String(o).replace(/^[A-Ha-h][.、．)）:：]\s*/, '')))
+    .filter((t) => t.length >= 1);
+  const fullNorm = norm([item.question, ...(item.options || [])].join(''));
+  return { id: item.id, qNorm, fullNorm, optTexts, q2: grams(qNorm, 2), q3: grams(qNorm, 3), f2: grams(fullNorm, 2) };
+});
+
+const round = (n) => Math.round(n * 1000) / 1000;
+
+function search(text, limit = 5) {
+  const q = norm(text);
+  if (q.length < 2) return { best: null, candidates: [], partial: false };
+  const tooShort = q.length < 5;
+  const q2 = grams(q, 2);
+  const q3 = grams(q, 3);
+
+  const scored = [];
+  for (let i = 0; i < BANK.length; i++) {
+    const ix = INDEX[i];
+    if (!ix.qNorm) continue;
+    let score;
+
+    if (!tooShort && (q.includes(ix.qNorm) || ix.qNorm.includes(q))) score = 0.97;
+    else if (!tooShort && (q.includes(ix.fullNorm) || ix.fullNorm.includes(q))) score = 0.9;
+    else {
+      const d2 = dice(q2, ix.q2);
+      const d3 = dice(q3, ix.q3);
+      const df = dice(q2, ix.f2);
+      let optHit = 0;
+      for (const o of ix.optTexts) if (o.length >= 2 && q.includes(o)) optHit++;
+      const optRate = ix.optTexts.length ? optHit / ix.optTexts.length : 0;
+      score = 0.4 * d2 + 0.32 * d3 + 0.13 * df + 0.15 * optRate;
+
+      // 只说半句时按覆盖率兜底，封顶 0.8
+      if (q.length >= 8 && q.length < ix.qNorm.length * 0.8) {
+        let hit = 0;
+        for (const g of q2) if (ix.q2.has(g)) hit++;
+        const cov = hit / q2.size;
+        if (cov >= 0.62) score = Math.max(score, Math.min(0.8, cov * 0.78));
+      }
+    }
+    scored.push({ item: BANK[i], score });
+  }
+
+  scored.sort((a, b) => b.score - a.score);
+  const candidates = scored.slice(0, limit).map(({ item, score }) => ({ ...item, score: round(score) }));
+  const best = !tooShort && candidates[0] && candidates[0].score >= 0.34 ? candidates[0] : null;
+  return { best, candidates, partial: tooShort };
+}
+
+/* ------------------------------------------------------------------ *
+ * 渲染
+ * ------------------------------------------------------------------ */
+
+const $ = (s) => document.querySelector(s);
+const el = { text: $('#q'), status: $('#status'), result: $('#result') };
+
+const escapeHtml = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+function setStatus(msg, kind = '') {
+  el.status.textContent = msg || '';
+  el.status.className = 'status' + (kind ? ' ' + kind : '');
+}
+
+function scoreChip(score) {
+  const p = Math.round(score * 100);
+  const cls = score >= 0.8 ? 'good' : score >= 0.5 ? 'warn' : '';
+  return `<span class="chip ${cls}">相似度 ${p}%</span>`;
+}
+
+function renderCandidates(list) {
+  if (!list || !list.length) return '';
+  return `
+    <div class="section-title" style="margin-top:20px">其他候选（点一下查看该题）</div>
+    <div class="candidates">
+      ${list.map((c) => `
+        <div class="cand" data-q="${escapeHtml(c.question)}">
+          <span class="sc">${Math.round(c.score * 100)}%</span>
+          <span class="txt">${escapeHtml(c.question)}</span>
+        </div>`).join('')}
+    </div>`;
+}
+
+function render(data, rawText) {
+  const best = data.best;
+
+  if (!best) {
+    el.result.innerHTML = data.partial
+      ? `<div class="empty">继续输入…<br><span style="font-size:12px">这几个字还不够定位一道题，下面是题库里最接近的。</span></div>
+         ${renderCandidates(data.candidates)}`
+      : `<div class="empty">题库里没有匹配到这道题<br><span style="font-size:12px">可以试试：换个说法、少打几个字重查。</span></div>
+         ${renderCandidates(data.candidates)}`;
+    return;
+  }
+
+  const ans = String(best.answer || '').trim();
+  const isChoice = /^[A-H]{1,6}$/.test(ans);
+  const answerText = ans ? `答案：${ans}` : '题库中暂无答案';
+  const longAnswer = !isChoice && ans.length > 14;
+
+  const optionList = (best.options || []).length
+    ? `<ul class="options">${best.options.map((o) => {
+        const letter = (String(o).match(/^([A-H])/) || [])[1];
+        const isCorrect = letter && ans && ans.toUpperCase().includes(letter);
+        return `<li class="${isCorrect ? 'correct' : ''}">${escapeHtml(o)}</li>`;
+      }).join('')}</ul>`
+    : '';
+
+  const tags = (best.tags || []).map((t) => `<span class="chip tag">${escapeHtml(t)}</span>`).join('');
+
+  el.result.innerHTML = `
+    <div class="answer-box">
+      <div class="answer-label">标准答案</div>
+      <div class="answer-value ${!ans ? 'none' : longAnswer ? 'long' : ''}">${escapeHtml(answerText)}</div>
+    </div>
+    <div class="meta-row">
+      ${best.score != null ? scoreChip(best.score) : ''}
+      <span class="chip">题库 ${BANK.length} 题</span>
+      ${tags}
+    </div>
+    <div class="section-title">题干</div>
+    <div class="question-text">${escapeHtml(best.question || rawText)}</div>
+    ${optionList}
+    ${best.analysis
+      ? `<div class="section-title">解析</div><div class="analysis">${escapeHtml(best.analysis)}</div>`
+      : '<div class="empty" style="padding:14px 0">这道题在题库里还没有解析</div>'}
+    ${renderCandidates((data.candidates || []).filter((c) => c.id !== best.id))}`;
+}
+
+/* ------------------------------------------------------------------ *
+ * 交互
+ * ------------------------------------------------------------------ */
+
+let seq = 0;
+let autoTimer = null;
+let lastAuto = '';
+
+function solve(text) {
+  text = (text || '').trim();
+  if (!text) return setStatus('题目是空的', 'err');
+  const my = ++seq;
+  setStatus('正在题库中匹配…');
+  // 匹配是同步的，但仍走一次微任务，让「匹配中」先刷出来
+  setTimeout(() => {
+    if (my !== seq) return;
+    const data = search(text, 5);
+    render(data, text);
+    if (data.partial) setStatus(`只有 ${text.length} 个字，先给候选（多打几个字更准）`, 'ok');
+    else if (data.best) setStatus(`匹配成功（相似度 ${(data.best.score * 100).toFixed(0)}%）`, 'ok');
+    else setStatus('题库里没找到这道题', 'err');
+  }, 0);
+}
+
+function scheduleAuto() {
+  clearTimeout(autoTimer);
+  autoTimer = setTimeout(() => {
+    const text = el.text.value.trim();
+    if (text.length < 2 || text === lastAuto) return;
+    lastAuto = text;
+    solve(text);
+  }, 600);
+}
+
+let composing = false;
+el.text.addEventListener('compositionstart', () => { composing = true; });
+el.text.addEventListener('compositionend', () => { composing = false; scheduleAuto(); });
+el.text.addEventListener('input', () => {
+  if (composing || el.text.isComposing) return;
+  scheduleAuto();
+});
+
+el.result.addEventListener('click', (ev) => {
+  const cand = ev.target.closest('.cand');
+  if (!cand) return;
+  const q = cand.dataset.q || '';
+  el.text.value = q;
+  lastAuto = q;
+  solve(q);
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+});
+
+$('#go').addEventListener('click', () => {
+  clearTimeout(autoTimer);
+  lastAuto = el.text.value.trim();
+  solve(el.text.value);
+});
+
+$('#clear').addEventListener('click', () => {
+  el.text.value = '';
+  lastAuto = '';
+  setStatus('');
+  el.result.innerHTML = '<div class="empty">还没有结果<br><span style="font-size:12px">在上面输入题目，答案会出现在这里</span></div>';
+  el.text.focus();
+});
+
+/* 启动 */
+$('#bankCount').textContent = `题库 ${BANK.length} 题`;
+if (!BANK.length) {
+  el.result.innerHTML = '<div class="empty">题库没有加载进来<br><span style="font-size:12px">这是打包出错，重新生成一次即可</span></div>';
+}
+</script>
+
+</body>
+</html>
